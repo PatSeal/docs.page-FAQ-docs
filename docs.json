@@ -1,0 +1,74 @@
+{
+  "name": "Avodah Help Center",
+  "description": "Everything you need to know to use Avodah.",
+  "theme": {
+    "primary": "#2563EB"
+  },
+  "header": {
+    "showGitHubCard": true,
+    "links": [
+      { "title": "Admin panel (WIP)", "href": "https://admin.avodahapp.com" }
+    ]
+  },
+  "sidebar": [
+    {
+      "pages": [
+        { "title": "Help Center", "href": "/", "icon": "house" }
+      ]
+    },
+    {
+      "group": "Getting Started",
+      "icon": "rocket",
+      "pages": [
+        { "title": "Overview", "href": "/getting-started" },
+        { "title": "Creating an account", "href": "/getting-started/creating-an-account" },
+        { "title": "Logging in", "href": "/getting-started/logging-in" },
+        { "title": "Installing to your home screen", "href": "/getting-started/installing-to-your-home-screen" }
+      ]
+    },
+    {
+      "group": "Using Avodah",
+      "icon": "grip",
+      "pages": [
+        { "title": "Overview", "href": "/using-the-app" },
+        { "title": "Home & dashboard", "href": "/using-the-app/home-and-dashboard" },
+        { "title": "Turning on notifications", "href": "/using-the-app/notifications" },
+        { "title": "Profile & account settings", "href": "/using-the-app/profile-and-account-settings" }
+      ]
+    },
+    {
+      "group": "Groups",
+      "icon": "users",
+      "pages": [
+        { "title": "Overview", "href": "/groups" },
+        { "title": "Joining a group", "href": "/groups/joining-a-group" },
+        { "title": "Group chat & updates", "href": "/groups/group-chat-and-updates" }
+      ]
+    },
+    {
+      "group": "Events",
+      "icon": "calendar",
+      "pages": [
+        { "title": "Overview", "href": "/events" },
+        { "title": "Viewing events", "href": "/events/viewing-events" },
+        { "title": "RSVP & check-in", "href": "/events/rsvp-and-check-in" }
+      ]
+    },
+    {
+      "group": "Giving",
+      "icon": "hand-holding-heart",
+      "pages": [
+        { "title": "Overview", "href": "/giving" },
+        { "title": "Making a gift", "href": "/giving/making-a-gift" },
+        { "title": "Giving history & receipts", "href": "/giving/giving-history-and-receipts" }
+      ]
+    },
+    {
+      "group": "FAQ",
+      "icon": "circle-question",
+      "pages": [
+        { "title": "Frequently Asked Questions", "href": "/faq" }
+      ]
+    }
+  ]
+}
