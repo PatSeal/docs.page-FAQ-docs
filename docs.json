@@ -5,10 +5,7 @@
     "primary": "#2563EB"
   },
   "header": {
-    "showGitHubCard": true,
-    "links": [
-      { "title": "Admin panel (WIP)", "href": "https://admin.avodahapp.com" }
-    ]
+    "showGitHubCard": true
   },
   "sidebar": [
     {
