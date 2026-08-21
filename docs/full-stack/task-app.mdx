@@ -1,0 +1,223 @@
+---
+title: Build a Full-Stack Task App
+description: Follow an end-to-end project plan from schema to deployed user flow.
+---
+
+This project combines the handbook's object-oriented examples into a small application. Build it in milestones so every object boundary works before the next infrastructure layer is added.
+
+## Requirements
+
+A signed-in user can:
+
+- list their tasks;
+- add a task with a 2–120 character title;
+- mark a task complete or open;
+- delete a task; and
+- see useful loading, empty, validation, and failure states.
+
+Each user can access only their own tasks.
+
+## Project shape
+
+```text
+task-app/
+  client/
+    src/
+      domain/task.js
+      application/task-collection.js
+      infrastructure/task-api-client.js
+      ui/task-form-view.js
+      ui/task-list-view.js
+      ui/task-page-controller.js
+      composition-root.js
+  server/
+    src/
+      domain/task.js
+      domain/task-title.js
+      application/create-task.js
+      application/complete-task.js
+      application/task-repository.js
+      interfaces/task-http-controller.js
+      interfaces/error-middleware.js
+      infrastructure/postgres-task-repository.js
+      composition-root.js
+      server.js
+  database/
+    migrations/
+  tests/
+  .env.example
+  README.md
+```
+
+A single repository makes the tutorial easy to coordinate. Larger teams may choose separate repositories when release and ownership needs justify them.
+
+## Milestone 1: Build the static interface
+
+Create semantic HTML for:
+
+- a page heading and short description;
+- a labeled task form;
+- a task filter;
+- a task list using list markup; and
+- buttons with names that include the relevant task.
+
+Style it mobile-first. Test keyboard focus, zoom, long titles, no tasks, and many tasks. Use hard-coded sample data at this stage.
+
+## Milestone 2: Add browser state
+
+Represent tasks with an entity that protects its state:
+
+```js
+class Task {
+  #id;
+  #title;
+  #completed;
+  #createdAt;
+
+  constructor({ id, title, completed = false, createdAt }) {
+    this.#id = id;
+    this.#title = title;
+    this.#completed = completed;
+    this.#createdAt = createdAt;
+  }
+
+  get id() {
+    return this.#id;
+  }
+
+  get title() {
+    return this.#title;
+  }
+
+  get completed() {
+    return this.#completed;
+  }
+
+  get createdAt() {
+    return new Date(this.#createdAt);
+  }
+
+  toggle() {
+    this.#completed = !this.#completed;
+  }
+}
+```
+
+Create a `TaskCollection` to add, remove, find, and filter tasks without exposing its storage. Let `TaskListView` render and report events, and let `TaskPageController` coordinate those objects. Keep DOM queries inside view constructors and the composition root.
+
+Keep the interface working before introducing the network.
+
+## Milestone 3: Define the API contract
+
+Use these routes:
+
+```text
+GET    /api/tasks
+POST   /api/tasks
+PATCH  /api/tasks/:taskId
+DELETE /api/tasks/:taskId
+```
+
+Use a consistent envelope:
+
+```json
+{ "data": { "id": "task_1", "title": "Learn APIs", "completed": false } }
+```
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "Check the highlighted fields.",
+    "details": [{ "field": "title", "message": "Title is required." }]
+  }
+}
+```
+
+Write contract examples before coding the server. They become a shared reference for frontend, backend, and tests.
+
+## Milestone 4: Build the API in memory
+
+Create `Task`, `TaskTitle`, `CreateTask`, `CompleteTask`, `TaskRepository`, `InMemoryTaskRepository`, and `TaskHttpController` classes. The in-memory repository replaces a database without changing the use cases. Add:
+
+- JSON body parsing with a small size limit;
+- field validation;
+- stable status and error codes;
+- a central not-found and error handler;
+- a request ID; and
+- structured request logs.
+
+Test the API directly before connecting the browser.
+
+## Milestone 5: Connect the frontend
+
+Create one API client adapter:
+
+```js
+class TaskApiClient {
+  constructor({ baseUrl = '/api', fetchImplementation = fetch }) {
+    this.baseUrl = baseUrl;
+    this.fetchImplementation = fetchImplementation;
+  }
+
+  async update(taskId, changes) {
+    const response = await this.fetchImplementation(
+      `${this.baseUrl}/tasks/${encodeURIComponent(taskId)}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(changes),
+      },
+    );
+
+    const result = await response.json();
+    if (!response.ok) throw new ApiError({ status: response.status, ...result.error });
+    return new Task(result.data);
+  }
+}
+```
+
+The page should display:
+
+- loading while the initial list is requested;
+- an invitation to add the first task when the list is empty;
+- field feedback for validation failures;
+- progress while a change is saved; and
+- a retry path for temporary failures.
+
+Inject an `UpdateStrategy` into the page controller when both pessimistic and optimistic behavior are needed. Each strategy honors the same `execute({ task, changes })` contract. A pessimistic object waits for the server; an optimistic object changes immediately and rolls back or reconciles on failure.
+
+## Milestone 6: Add the database
+
+Create `users` and `tasks` through a migration. Implement `PostgresTaskRepository extends TaskRepository` using parameterized SQL, and switch only the composition root from the in-memory object to the PostgreSQL object.
+
+For every task query, include the authenticated `owner_id`. Add database constraints for title length, ownership, and required values. Use a bounded connection pool.
+
+## Milestone 7: Add accounts and sessions
+
+Implement `SignUp`, `SignIn`, `SignOut`, and `GetCurrentSession` use cases. Inject `PasswordHasher`, `UserRepository`, and `SessionStore` contracts with maintained production adapters. Return an opaque HttpOnly cookie session and protect state-changing cookie-authenticated requests against CSRF.
+
+Add tests proving that one user cannot read, update, or delete another user's task.
+
+## Milestone 8: Test the full flow
+
+Cover:
+
+- entity and value-object behavior through public methods;
+- use cases with injected fake collaborators;
+- shared repository contract behavior and the PostgreSQL implementation against a test database;
+- API requests including permissions;
+- one browser-level happy path; and
+- important failure states.
+
+Run lint, tests, a production build, and migration checks in CI.
+
+## Milestone 9: Deploy and observe
+
+Deploy the database and application, configure secrets, run migrations as a controlled release step, and serve the site over HTTPS. Add logs, request duration and error metrics, an uptime check, and alerts that point to an action.
+
+After deployment, create, update, and delete a task with a non-admin test account. Verify that logs contain request IDs but no passwords or session values.
+
+## Stretch goals
+
+Add due dates, cursor pagination, search, shared projects, real-time updates, offline support, or email reminders one at a time. For every feature, update the entity or value object, use cases, interface adapters, repository contract, schema, threat model, tests, and monitoring. Run the [OOP review checklist](/reference/oop-checklist) before accepting it.

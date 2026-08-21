@@ -1,0 +1,80 @@
+---
+title: Backend Development
+description: Build server-side code that applies rules, protects data, and serves reliable APIs.
+---
+
+The backend runs in an environment you control. It receives requests, authenticates users, validates input, applies business rules, reads or writes data, and returns responses.
+
+## What belongs on the server
+
+Use the backend for:
+
+- identity, sessions, and permissions;
+- trusted validation and business rules;
+- database access;
+- private credentials and third-party service keys;
+- emails, payments, file processing, and scheduled work; and
+- logging, metrics, and audit events.
+
+The frontend can repeat validation for a faster experience, but the server is the final authority. A request can be sent without your frontend.
+
+## A request pipeline
+
+A request often passes through these stages:
+
+1. **Connection and parsing**: read method, URL, headers, and body.
+2. **Cross-cutting middleware objects**: assign a request ID, apply security headers, and log basic context.
+3. **Authentication**: determine who made the request.
+4. **Authorization**: decide whether that identity may perform the action.
+5. **Validation**: check types, formats, allowed values, and required fields.
+6. **Use case**: coordinate the application's objects and rules.
+7. **Repository**: query or update persistent data through a contract.
+8. **Response**: return a stable status, headers, and body.
+9. **Error handling**: translate known failures and record unexpected ones.
+
+Keeping these responsibilities separate makes testing and change safer.
+
+## API layers
+
+One maintainable OOP structure is:
+
+```text
+src/
+  domain/
+    task.js           Entity and invariants
+    task-title.js     Value object
+  application/
+    create-task.js    One use case class
+    task-repository.js  Repository contract
+  interfaces/http/
+    task-controller.js  Translate HTTP to use cases
+    error-middleware.js Translate errors to HTTP
+  infrastructure/
+    postgres-task-repository.js
+    crypto-id-generator.js
+  composition-root.js  Create and inject concrete objects
+  server.js            Start the composed application
+```
+
+A small project can use fewer folders. Preserve responsibilities and dependency direction even when several focused classes share one file. The domain never imports Express or the SQL driver.
+
+## Backend object rules
+
+- HTTP controllers remain thin adapters.
+- Use cases coordinate one application action.
+- Entities and value objects protect business invariants.
+- Repositories expose application-owned contracts.
+- Infrastructure classes implement those contracts.
+- The composition root is the only place that selects concrete implementations.
+- Dependencies are injected through constructors instead of imported as mutable singletons.
+
+## Learn this section
+
+- [Servers and routing](/backend/servers-and-routing)
+- [Build a Node API](/backend/node-api)
+- [Validation and errors](/backend/validation-and-errors)
+- [Authentication](/backend/authentication)
+
+<Warning>
+Do not trust data because it came from your own interface. Treat every network request as untrusted until it has been authenticated, authorized, and validated.
+</Warning>

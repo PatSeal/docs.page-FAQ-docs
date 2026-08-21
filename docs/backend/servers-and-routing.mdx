@@ -1,0 +1,97 @@
+---
+title: Servers and Routing
+description: Turn HTTP requests into clear, predictable application behavior.
+---
+
+A web server listens for HTTP requests on a host and port. A **route** connects a method and path to a handler.
+
+## Design resource-oriented routes
+
+For tasks, a straightforward HTTP API is:
+
+| Method | Path | Purpose | Typical success |
+| --- | --- | --- | --- |
+| `GET` | `/api/tasks` | List tasks | `200 OK` |
+| `GET` | `/api/tasks/:taskId` | Get one task | `200 OK` |
+| `POST` | `/api/tasks` | Create a task | `201 Created` |
+| `PATCH` | `/api/tasks/:taskId` | Update selected fields | `200 OK` |
+| `DELETE` | `/api/tasks/:taskId` | Remove a task | `204 No Content` |
+
+Use nouns in paths and methods for actions. Nested routes can communicate ownership, such as `/api/projects/:projectId/tasks`.
+
+## Path, query, and body values
+
+Different request parts serve different purposes:
+
+- **Path parameters** identify a resource: `/tasks/42`.
+- **Query parameters** filter, sort, search, or paginate: `/tasks?status=open&page=2`.
+- **Request body** contains data for a create or update operation.
+- **Headers** carry metadata such as content type, accepted response type, authorization, or a request ID.
+
+Avoid placing sensitive values in URLs because URLs often appear in browser history, server logs, and analytics.
+
+## Choose status codes consistently
+
+Common responses include:
+
+| Status | Meaning |
+| --- | --- |
+| `200 OK` | A read or update succeeded and has a response body |
+| `201 Created` | A new resource was created |
+| `204 No Content` | An action succeeded without a body |
+| `400 Bad Request` | The request is malformed or fails general validation |
+| `401 Unauthorized` | Authentication is missing or invalid |
+| `403 Forbidden` | Identity is known but lacks permission |
+| `404 Not Found` | The requested resource is not available |
+| `409 Conflict` | The request conflicts with current state |
+| `422 Unprocessable Content` | The syntax is valid but field values are unacceptable |
+| `429 Too Many Requests` | A rate limit was exceeded |
+| `500 Internal Server Error` | An unexpected server failure occurred |
+
+Status text is not enough for application errors. Return a predictable JSON shape.
+
+## A consistent response contract
+
+Success:
+
+```json
+{
+  "data": {
+    "id": "task_42",
+    "title": "Learn routing",
+    "completed": false
+  }
+}
+```
+
+Validation failure:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "Check the highlighted fields.",
+    "details": [
+      { "field": "title", "message": "Title is required." }
+    ],
+    "requestId": "req_b7f3"
+  }
+}
+```
+
+A stable machine-readable `code` lets the client make decisions without comparing human sentences. A request ID helps support staff connect a user's error to server logs.
+
+## Pagination
+
+Do not return an unlimited collection. Two common approaches are:
+
+- **offset pagination**, such as `?page=3&limit=20`, which is simple but can shift when rows are added; and
+- **cursor pagination**, such as `?after=task_42&limit=20`, which is often more stable for frequently changing collections.
+
+Cap the maximum page size on the server.
+
+## Idempotency
+
+An operation is idempotent when repeating the same request has the same intended effect as sending it once. `GET`, `PUT`, and `DELETE` are designed to be idempotent; `POST` often is not.
+
+For operations where duplicate creation would be harmful, accept an idempotency key and remember the result for that key. This is especially important for payments and retrying clients.

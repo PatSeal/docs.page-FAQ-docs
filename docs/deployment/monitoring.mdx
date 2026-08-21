@@ -1,0 +1,105 @@
+---
+title: Monitoring and Maintenance
+description: Observe real behavior, respond to incidents, and keep the application healthy over time.
+---
+
+An application is not finished when it is deployed. Dependencies age, usage changes, data grows, and failures occur in ways that local testing did not predict.
+
+## The main signals
+
+### Logs
+
+Logs record discrete events with context. Prefer structured fields over long unstructured sentences:
+
+```json
+{
+  "level": "error",
+  "event": "task_update_failed",
+  "requestId": "req_b7f3",
+  "route": "PATCH /api/tasks/:taskId",
+  "status": 500,
+  "durationMs": 184,
+  "release": "abc123"
+}
+```
+
+Avoid passwords, tokens, full request bodies, and unnecessary personal data.
+
+### Metrics
+
+Metrics summarize numeric behavior over time. Start with:
+
+- request rate, error rate, and latency;
+- CPU, memory, disk, and connection saturation;
+- database query latency, locks, storage, and connection usage;
+- job queue depth and oldest job age; and
+- business outcomes such as completed sign-ins or successful task creation.
+
+Use percentiles for latency. An average can hide a painful slow tail.
+
+### Traces
+
+A distributed trace follows one request through services and dependencies. Propagate a trace or request ID so browser reports, API logs, database timing, and external calls can be connected.
+
+## Define service objectives
+
+A service-level indicator (SLI) is a measured behavior, such as the share of successful task-list requests under a latency threshold. A service-level objective (SLO) is its target over a period.
+
+SLOs help the team balance reliability work and feature delivery using evidence rather than aiming for an undefined “100% uptime.”
+
+## Alert on action
+
+An alert should identify meaningful user impact or an urgent risk and point to a first response. Good alerts include:
+
+- the affected service and environment;
+- current and expected values;
+- a dashboard or trace link;
+- recent deployment information;
+- a runbook; and
+- ownership or escalation path.
+
+Avoid paging on every individual error. Alert on sustained rates, exhausted capacity, broken critical journeys, or rapid SLO consumption.
+
+## Respond to incidents
+
+1. Confirm and describe user impact.
+2. Assign coordination and technical roles when the incident is large.
+3. Mitigate quickly through rollback, feature disablement, traffic reduction, or dependency isolation.
+4. Communicate status at a predictable cadence.
+5. Preserve useful evidence.
+6. Recover and verify user journeys.
+7. Write a blameless review with owned follow-up actions.
+
+The first goal is reducing harm, not proving the root cause.
+
+## Maintain continuously
+
+Create a regular schedule for:
+
+- supported runtime and dependency updates;
+- security patches and credential rotation;
+- database vacuuming or maintenance where required;
+- index and slow-query review;
+- backup restoration tests;
+- certificate and domain ownership checks;
+- access reviews;
+- retention and deletion verification;
+- cost and capacity review; and
+- removal of stale feature flags and unused resources.
+
+## Plan capacity
+
+Measure current resource use, expected growth, and the time required to add capacity. Load-test representative operations in a safe environment. Include the database and external dependencies; moving a bottleneck is not removing it.
+
+## Make recovery explicit
+
+Define:
+
+- **recovery time objective (RTO)**: how long restoration may take; and
+- **recovery point objective (RPO)**: how much recent data loss is acceptable.
+
+These targets drive backup frequency, replication, failover, and testing. Document restoration steps and practice them before an emergency.
+
+<Info>
+Observability is the ability to understand internal system behavior from its outputs. More telemetry is not automatically better; collect signals that answer operational questions without exposing sensitive data.
+</Info>

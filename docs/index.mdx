@@ -1,16 +1,204 @@
 ---
-title: Avodah Help Center
-description: Everything you need to know to use Avodah.
+title: Web Development Handbook
+description: Learn how to build, connect, test, secure, and deploy modern web applications.
 ---
 
-Welcome! Use the sidebar to find how-to guides for creating your account, using the app day to day, and answers to common questions.
+Web development is the work of creating sites and applications that run through a browser. This handbook takes you from the visible surface of a web page to the servers and databases behind a full-stack application.
+
+You do not need prior programming experience. Each section explains the idea in plain language, shows a small example, and gives you something practical to build.
 
 <Info>
-This is a prototype built to test [docs.page](https://docs.page) as a hosting option — content is placeholder text drafted from an early site-map sketch, not yet verified against the live app screen-by-screen.
+Follow the sections in order if you are new. If you already build websites, use the sidebar as a reference and jump directly to the topic you need.
 </Info>
 
-## Popular sections
+## How the documentation is organized
 
-- [Getting Started](/getting-started) — creating your account and installing Avodah
-- [Frequently Asked Questions](/faq) — quick answers
-- [Giving](/giving) — making a gift and finding receipts
+Every section is a folder. Its `index.mdx` file is the section landing page, and every detailed topic stays inside the same folder. This page is the only documentation page at the root because its job is to connect all sections.
+
+```text
+docs/
+  index.mdx
+  getting-started/
+    index.mdx
+    how-the-web-works.mdx
+    set-up.mdx
+    first-page.mdx
+  fundamentals/
+    index.mdx
+    ...topic pages
+  frontend/
+    index.mdx
+    ...topic pages
+  backend/
+    index.mdx
+    ...topic pages
+  data/
+    index.mdx
+    ...topic pages
+  full-stack/
+    index.mdx
+    ...topic pages
+  deployment/
+    index.mdx
+    ...topic pages
+  reference/
+    index.mdx
+    ...topic pages
+```
+
+## Section connection map
+
+Each section produces something the next section uses:
+
+| Section folder | What you implement | What it connects to |
+| --- | --- | --- |
+| [`getting-started/`](/getting-started) | Workspace, request mental model, first page | The browser fundamentals |
+| [`fundamentals/`](/fundamentals) | Semantic UI, OOCSS components, entities, value objects, DOM views | Frontend controllers and state |
+| [`frontend/`](/frontend) | Views, controllers, collections, loading state, and API clients | HTTP endpoints |
+| [`backend/`](/backend) | HTTP controllers, validators, use cases, authentication, and repository contracts | Database adapters |
+| [`data/`](/data) | SQL schema, repository implementations, mapping, and transactions | Full-stack composition roots |
+| [`full-stack/`](/full-stack) | SOLID object graph, security, tests, and the complete task app | Production release |
+| [`deployment/`](/deployment) | Configuration, CI/CD, rollout, monitoring, and recovery | Continuous maintenance |
+| [`reference/`](/reference) | Roadmap, glossary, Git workflow, FAQ, and OOP review checklist | Every section |
+
+## The full picture
+
+A typical web application has several connected layers:
+
+| Layer | What it does | Common technologies |
+| --- | --- | --- |
+| Browser | Displays the interface and handles user interaction | HTML, CSS, JavaScript |
+| Frontend application | Coordinates views, state, forms, and API clients through collaborating objects | JavaScript classes, modules, React, Vue, Svelte |
+| Web server | Routes requests through controllers, services, and repositories | Node.js, Express, Python, Go, Java |
+| Database | Stores durable application data | PostgreSQL, MySQL, SQLite, MongoDB |
+| Infrastructure | Runs, secures, and observes the application | DNS, TLS, containers, cloud platforms, CI/CD |
+
+The layers are easier to understand when you learn them one at a time. A user action usually flows through all of them:
+
+1. A person selects **Save** in the browser.
+2. JavaScript checks the form and sends an HTTP request.
+3. The server validates the request and applies business rules.
+4. The database stores the change.
+5. The server sends a response.
+6. The browser updates the screen.
+
+## The object-oriented design standard
+
+All application examples in this handbook follow one consistent object model:
+
+- **Entities** protect domain state and rules, such as `Task`.
+- **Value objects** validate small concepts, such as `TaskTitle`.
+- **Controllers** translate browser or HTTP events into application calls.
+- **Services or use cases** coordinate workflows without knowing interface or database details.
+- **Repositories** provide an abstraction over persistence.
+- **Adapters** connect external tools such as Fetch, Express, PostgreSQL, hashing, or email.
+- **Composition roots** create the objects and inject their dependencies.
+
+Encapsulation keeps state changes behind methods. Abstraction exposes small contracts. Polymorphism lets one implementation replace another. Inheritance is reserved for genuine “is-a” relationships; composition is the normal way objects collaborate.
+
+## Implement one feature across all sections
+
+Use “complete a task” to see how the folders connect:
+
+1. **Fundamentals:** [`Task`](/fundamentals/object-oriented-javascript) owns private completion state and exposes `complete()` and `reopen()`.
+2. **Frontend:** [`TaskListView` and `TaskPageController`](/frontend/components-and-state) receive a click and call the frontend task object.
+3. **Frontend HTTP adapter:** [`TaskApiClient`](/frontend/forms-and-data) sends `PATCH /api/tasks/:taskId`.
+4. **Backend interface:** [`TaskHttpController`](/backend/node-api) translates the request into use-case input.
+5. **Application layer:** `CompleteTask` loads the owned entity through the `TaskRepository` contract and calls `task.complete()`.
+6. **Data layer:** [`PostgresTaskRepository`](/data/data-access) saves the entity with parameterized SQL.
+7. **Full-stack assembly:** the [`composition root`](/full-stack/oop-solid-design) injects every concrete adapter into the stable application objects.
+8. **Quality:** [`tests`](/full-stack/testing-debugging) verify entity behavior, use cases, repository contracts, HTTP integration, and the browser journey.
+9. **Production:** [`deployment and monitoring`](/deployment) release the same object graph with protected configuration and observable infrastructure.
+
+The response then travels back through repository, use case, HTTP controller, API client, page controller, and view. Each object changes only the data it owns.
+
+## Connect the implementation with composition roots
+
+The frontend composition root connects browser-facing objects:
+
+```js
+const taskApiClient = new TaskApiClient({});
+const taskCollection = new TaskCollection();
+const taskListView = new TaskListView({
+  root: document.querySelector('#task-list'),
+});
+
+const taskPageController = new TaskPageController({
+  collection: taskCollection,
+  listView: taskListView,
+  filterView: new StatusFilterView({
+    root: document.querySelector('#status-filters'),
+  }),
+});
+
+const createTaskController = new CreateTaskController({
+  formView: new TaskFormView({
+    form: document.querySelector('#task-form'),
+  }),
+  taskApiClient,
+  taskCollection,
+  taskListView,
+});
+
+taskPageController.start();
+createTaskController.start();
+```
+
+The backend composition root connects server-facing objects:
+
+```js
+const database = new DatabasePool(configuration.databaseUrl);
+const taskRepository = new PostgresTaskRepository({ database });
+
+const taskController = new TaskHttpController({
+  createTask: new CreateTask({
+    taskRepository,
+    idGenerator: new CryptoIdGenerator(),
+    clock: new SystemClock(),
+  }),
+  completeTask: new CompleteTask({ taskRepository }),
+  listTasks: new ListTasks({ taskRepository }),
+});
+
+const webApp = new ExpressApp({
+  taskController,
+  logger,
+});
+
+webApp.listen(configuration.port);
+```
+
+The composition roots know the concrete browser, Express, and PostgreSQL adapters. Entities and use cases depend only on their own small contracts.
+
+## Choose your starting point
+
+- [Start here](/getting-started) if terms such as browser, server, and HTTP are new.
+- [Web fundamentals](/fundamentals) to learn HTML, CSS, and JavaScript.
+- [Object-oriented JavaScript](/fundamentals/object-oriented-javascript) to learn classes, encapsulation, composition, and polymorphism.
+- [Frontend development](/frontend) to build maintainable browser applications.
+- [Backend development](/backend) to create servers and APIs.
+- [Data and databases](/data) to model and store information.
+- [Full-stack development](/full-stack) to connect all the layers.
+- [Deploy and operate](/deployment) to run an application in production.
+- [Learning roadmap](/reference/roadmap) for a project-based study plan.
+
+## What you will build
+
+The examples grow into a small task application. It can create, list, update, and delete tasks. That simple project is large enough to teach the important patterns without hiding them under unnecessary features.
+
+By the end, you should be able to:
+
+- create semantic and responsive pages;
+- add browser behavior with JavaScript;
+- organize a frontend into components and state;
+- model application behavior with cohesive objects and SOLID boundaries;
+- design an HTTP API;
+- store related data safely in a SQL database;
+- connect the browser, server, and database;
+- test and debug each layer;
+- protect common security boundaries; and
+- deploy and monitor a production application.
+
+<Info>
+Do not try to memorize every property or method. Learn the mental model, practice finding reliable references, and build small projects repeatedly.
+</Info>

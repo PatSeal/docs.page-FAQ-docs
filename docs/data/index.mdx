@@ -1,0 +1,56 @@
+---
+title: Data and Databases
+description: Model durable information and access it safely from an application.
+---
+
+A database stores information after a request ends or a server restarts. Domain entities define application behavior, while repository objects translate those entities to durable storage. The database adds queries, constraints, and concurrency control.
+
+## Data questions come first
+
+Before choosing a database, ask:
+
+- What information must be stored?
+- Which records relate to one another?
+- Which values must be unique or always present?
+- Which reads and writes are most common?
+- Which operations must succeed or fail together?
+- How much data and traffic are expected?
+- How will the data be backed up, restored, retained, and deleted?
+
+The database name is less important than a clear model and operational plan.
+
+## The task application's data
+
+Our small application needs:
+
+- users with a unique email and password hash;
+- tasks owned by one user;
+- a title and completion state for each task; and
+- timestamps for creation and updates.
+
+This data is relational, so a SQL database is a natural fit.
+
+## Learn this section
+
+- [Database concepts](/data/databases)
+- [SQL and schema design](/data/sql-and-schema)
+- [Safe data access](/data/data-access): implement repository contracts, mapping, transactions, and units of work.
+
+## Database responsibilities
+
+A production database plan includes more than tables:
+
+- migrations for controlled schema changes;
+- constraints to protect valid data;
+- indexes for important query patterns;
+- connection limits and pooling;
+- encrypted connections and restricted credentials;
+- automated backups and tested restoration;
+- monitoring for latency, storage, locks, and failed queries; and
+- retention and privacy rules.
+
+The domain and use-case layers never import the SQL driver. A `TaskRepository` contract belongs to the application; `PostgresTaskRepository` is a replaceable infrastructure implementation.
+
+<Warning>
+A backup is only useful if it can be restored. Test restoration regularly and record the expected recovery time and acceptable data loss.
+</Warning>

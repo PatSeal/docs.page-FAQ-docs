@@ -1,0 +1,91 @@
+---
+title: Set Up Your Workspace
+description: Install the essential tools and organize a simple web project.
+---
+
+You only need a few tools to begin. Keep the setup simple until a project gives you a reason to add more.
+
+## Essential tools
+
+Install or choose:
+
+- a modern browser such as Chrome, Edge, Firefox, or Safari;
+- a code editor with HTML, CSS, and JavaScript support;
+- Git for tracking file history; and
+- Node.js when you reach modules, package tools, or backend development.
+
+You will also use a terminal. A terminal runs text commands and shows their output. Common commands include:
+
+```bash
+pwd                 # Show the current folder
+ls                  # List files on macOS/Linux
+dir                 # List files in Windows Command Prompt
+cd my-project       # Enter a folder
+cd ..               # Move to the parent folder
+```
+
+The exact prompt looks different on each operating system, but the ideas are the same.
+
+## Create a project folder
+
+Start with this structure:
+
+```text
+first-site/
+  index.html
+  styles.css
+  script.js
+  images/
+```
+
+- `index.html` is the entry page.
+- `styles.css` controls appearance and layout.
+- `script.js` adds behavior.
+- `images/` keeps media separate from code.
+
+Use lowercase file names and hyphens instead of spaces. URLs can be case-sensitive after deployment, even if your local computer is not.
+
+## Use a local server
+
+Opening `index.html` directly is enough for the first example, but some browser features require a local HTTP server. Your editor may provide one. If Node.js is installed, you can also use a small development server from your chosen toolchain.
+
+A local address often looks like:
+
+```text
+http://localhost:3000
+```
+
+`localhost` means “this computer.” The number is the port used by the development server.
+
+## Configure Git
+
+Inside the project folder:
+
+```bash
+git init
+git add index.html styles.css script.js
+git commit -m "Create first web page"
+```
+
+A `.gitignore` file tells Git which generated or private files not to track. A typical JavaScript project starts with:
+
+```gitignore
+node_modules/
+.env
+dist/
+coverage/
+```
+
+<Warning>
+Never commit passwords, access tokens, private keys, or `.env` files. Removing a secret from a later commit does not remove it from the earlier Git history.
+</Warning>
+
+## Check your setup
+
+You are ready when you can:
+
+- create and save the four starter items;
+- open `index.html` in a browser;
+- open the browser's developer tools;
+- run `git status` in the project folder; and
+- explain the difference between the editor, terminal, browser, and server.

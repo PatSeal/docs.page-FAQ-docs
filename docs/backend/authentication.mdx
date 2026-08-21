@@ -1,0 +1,119 @@
+---
+title: Authentication and Authorization
+description: Establish identity, manage sessions, and enforce permissions safely.
+---
+
+**Authentication** answers “Who are you?” **Authorization** answers “What are you allowed to do?” They are separate checks and both belong on the server.
+
+## A sign-in flow
+
+1. The client sends credentials over HTTPS.
+2. The server finds the account using a normalized identifier.
+3. It verifies the submitted password against a slow password hash.
+4. It creates a new session and rotates any earlier pre-authentication identifier.
+5. It sends a secure session cookie.
+6. Later requests use that cookie to identify the session.
+7. Every protected operation checks the current user's permission for the resource.
+
+Return a general sign-in failure such as “Email or password is incorrect.” A more specific response can help attackers discover registered accounts.
+
+## Separate authentication objects
+
+```js
+class SignIn {
+  constructor({ userRepository, passwordHasher, sessionService }) {
+    this.userRepository = userRepository;
+    this.passwordHasher = passwordHasher;
+    this.sessionService = sessionService;
+  }
+
+  async execute({ email, password, previousSessionId }) {
+    const user = await this.userRepository.findByEmail(email);
+    const valid = user
+      ? await this.passwordHasher.verify(password, user.passwordHash)
+      : await this.passwordHasher.performDummyVerification(password);
+
+    if (!valid || !user) throw new InvalidCredentialsError();
+
+    return this.sessionService.rotate({
+      previousSessionId,
+      userId: user.id,
+    });
+  }
+}
+```
+
+`SignIn` coordinates the workflow. A hashing adapter, user repository, and session service own their separate implementation details. Tests inject substitutes through the same contracts.
+
+## Store passwords correctly
+
+Never store a plain-text password or encrypt passwords with a reversible key. Wrap a maintained password-hashing library in a `PasswordHasher` adapter implementing a purpose-built algorithm and sensible current parameters. Store the resulting hash. The adapter verifies a later password against it.
+
+Also support:
+
+- strong but usable password policies;
+- rate limiting and detection for repeated failures;
+- multifactor authentication where the risk requires it;
+- secure password reset tokens that expire and can be used once; and
+- re-authentication for sensitive actions.
+
+## Cookie-based sessions
+
+A secure session cookie commonly uses:
+
+```http
+Set-Cookie: session=opaque-random-value; HttpOnly; Secure; SameSite=Lax; Path=/
+```
+
+- `HttpOnly` prevents normal browser JavaScript from reading the cookie.
+- `Secure` sends it only over HTTPS.
+- `SameSite` limits some cross-site requests.
+- `Path` controls where the browser sends it.
+
+Store only an opaque identifier in the cookie when using server-side sessions. Keep session data in a protected server store, set an appropriate expiry, rotate the identifier after sign-in and privilege changes, and invalidate it on sign-out.
+
+Cookie authentication also needs protection against cross-site request forgery for state-changing requests. Use an appropriate SameSite policy plus a CSRF token or a carefully validated origin strategy.
+
+## Tokens
+
+Bearer access tokens are common for APIs used by mobile apps or separate services. A bearer token grants access to whoever holds it, so protect it in transit and storage, keep its lifetime short, validate its audience and issuer, and design revocation or rotation where needed.
+
+Do not treat a signed token as encrypted. Its payload may be readable. Do not place secrets or unnecessary personal data inside it.
+
+For many browser applications on the same site as their backend, an HttpOnly cookie session is simpler and reduces exposure to token theft through JavaScript.
+
+## Enforce authorization on every resource
+
+Checking that a user is signed in is not enough. Put the ownership rule in the use case and repository contract:
+
+```js
+class CompleteOwnedTask {
+  constructor({ taskRepository }) {
+    this.taskRepository = taskRepository;
+  }
+
+  async execute({ taskId, currentUser }) {
+    const task = await this.taskRepository.findOwnedById(taskId, currentUser.id);
+
+    if (!task) throw new TaskNotFoundError();
+
+    task.complete();
+    return this.taskRepository.save(task);
+  }
+}
+```
+
+Filtering by both `id` and `owner_id` in the database query is often even safer. Returning `404` can avoid revealing that another user's resource exists.
+
+Common authorization models include:
+
+- role-based access control, such as member or administrator;
+- ownership checks for individual resources;
+- permission-based policies for specific actions; and
+- attribute-based rules using resource, user, and environment facts.
+
+For more complicated permission rules, inject a focused policy object such as `ProjectAccessPolicy` into the use case. Centralize each decision and test both allowed and denied cases. Do not place every permission in one unrelated global policy class.
+
+<Warning>
+Frontend route guards and hidden buttons improve the interface, but they do not enforce permission. The server must reject unauthorized requests even when they are sent directly.
+</Warning>

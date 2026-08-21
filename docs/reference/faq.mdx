@@ -1,0 +1,87 @@
+---
+title: Common Questions
+description: Clear answers to frequent questions from new web developers.
+---
+
+## Do I need to learn HTML and CSS before JavaScript?
+
+Learn enough HTML and CSS to build a clear, responsive static page first. Then add JavaScript. You will learn all three repeatedly, but JavaScript browser code is easier when you understand the document it reads and changes.
+
+## Should I learn a frontend framework immediately?
+
+No. Build at least one interactive project with browser APIs, entities, views, and controller objects first. Then learn one framework when routing or large interface composition solves a problem you have felt. Keep domain and application objects independent of the framework where practical.
+
+## Does OOP mean every line must be inside a class?
+
+No. OOP means application state and behavior have clear object owners. Browser events, array methods, promises, Express, and test libraries use callbacks. Those callbacks should delegate to cohesive objects. HTML, CSS, HTTP, and SQL keep their native paradigms; object-oriented JavaScript coordinates them through adapters.
+
+## Should I use inheritance everywhere?
+
+No. Prefer composition for collaborating behavior. Use inheritance only when a subtype can safely replace its base type and honor the same contract, such as `PostgresTaskRepository` replacing `TaskRepository`. Deep inheritance trees make change harder.
+
+## What is dependency injection?
+
+An object receives required collaborators through its constructor instead of constructing them internally or reading global singletons. A composition root connects production implementations. Tests can inject fakes through the same contracts.
+
+## Which programming language should I use for the backend?
+
+Several languages are strong choices. Node.js lets a JavaScript learner use one language in the browser and server. Python, C#, Java, PHP, Ruby, Go, and others have mature web ecosystems. Choose based on project needs, team experience, hosting, libraries, and job context. The HTTP, validation, security, data, and deployment concepts transfer.
+
+## SQL or a document database?
+
+Start with a relational database when records have relationships, constraints, and transactional changes. Choose a document model when the data and access patterns genuinely fit whole documents. Learn basic SQL either way; it teaches durable data modeling and querying skills.
+
+## Do I need an ORM?
+
+No. An ORM can be an infrastructure adapter behind a repository class, but it adds an abstraction. Learn SQL, constraints, indexes, transactions, and entity mapping so you can inspect generated queries and solve problems beneath it.
+
+## Is frontend validation enough?
+
+No. It improves the experience, but anyone can bypass browser code and send a request directly. Validate and authorize every operation on the server. Use database constraints for important final integrity.
+
+## Why does `fetch` not enter `catch` for a 404 or 500?
+
+`fetch` rejects for failures such as an unavailable network or an aborted request. An HTTP error is still a completed HTTP response. Check `response.ok` or `response.status`, then throw or return the error result intentionally.
+
+## Why does my page work locally but not after deployment?
+
+Common causes include:
+
+- file-name case differences;
+- incorrect absolute or relative paths;
+- missing environment configuration;
+- frontend routes not falling back to the entry HTML;
+- CORS or cookie origin settings;
+- a build output directory mismatch;
+- a migration that did not run; or
+- assuming a local file or service exists in production.
+
+Inspect the deployed browser Network panel, runtime logs, build output, and release configuration.
+
+## Where should I store API keys?
+
+Private keys belong only in a protected server or deployment secret system. A value included in browser code is public, even if it came from an environment variable. If a browser must call a third-party service with a private key, create a narrowly scoped server endpoint instead.
+
+## Cookies or local storage for authentication?
+
+For many browser applications, an opaque session identifier in a `Secure`, `HttpOnly`, appropriately `SameSite` cookie is a strong starting point. It reduces access from injected JavaScript. Cookie authentication needs CSRF protection for state-changing requests. Storage choice depends on architecture and threat model, so do not copy a token pattern without understanding its exposure and lifecycle.
+
+## How much testing is enough?
+
+Test in proportion to risk. Put many fast tests around entity behavior and use cases, contract tests around polymorphic repositories, integration tests around database and API adapters, and a smaller set of browser tests around critical journeys. Include failure, permission, and boundary cases.
+
+## How do I know when I am ready for a developer role?
+
+You do not need to know every tool. A strong beginner can build and deploy a small application, explain its request flow, use Git, debug with evidence, write focused tests, consider accessibility and security, and learn from documentation. Apply while continuing to improve; job descriptions often describe an ideal range, not a strict checklist.
+
+## How should I use AI coding tools while learning?
+
+Use them to explain errors, compare approaches, generate practice cases, or review your reasoning. Read every proposed change, run it, inspect the result, and verify security- or version-sensitive claims in primary documentation. If you cannot explain a critical line, do not ship it yet.
+
+## What should I build next?
+
+Choose a project with one new difficulty, not ten. Improve the task app with due dates, search, shared lists, file attachments, or offline behavior. Extend entities, use cases, interface adapters, repository contracts, permissions, tests, deployment, and monitoring. Review it with the [OOP checklist](/reference/oop-checklist).
+
+<Info>
+When stuck, reduce the problem. Replace real data with one hard-coded value, call the API outside the frontend, test the query separately, or reproduce the layout with two elements. Reconnect the layers after the smallest part works.
+</Info>

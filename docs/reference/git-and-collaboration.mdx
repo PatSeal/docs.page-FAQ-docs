@@ -1,0 +1,101 @@
+---
+title: Git and Collaboration
+description: Track changes, review work, and integrate code safely with a small team.
+---
+
+Git records snapshots of a project. A shared Git host adds pull requests, reviews, automated checks, issues, and release history.
+
+## The everyday model
+
+Your work moves through:
+
+```text
+Working tree → staging area → local commit → remote branch → pull request → main branch
+```
+
+- The **working tree** contains current file changes.
+- The **staging area** selects the exact change for the next commit.
+- A **commit** is a named local snapshot.
+- A **branch** is a movable line of commits.
+- A **pull request** proposes that one branch be reviewed and integrated.
+
+## Start a change
+
+```bash
+git switch main
+git pull --ff-only
+git switch -c feature/task-filters
+```
+
+Use a short branch name that describes one focused outcome.
+
+## Inspect before committing
+
+```bash
+git status
+git diff
+git diff --staged
+```
+
+Stage only the intended files:
+
+```bash
+git add src/components/task-filter.js src/components/task-filter.test.js
+git diff --staged
+git commit -m "Add task status filters"
+```
+
+A useful commit is small enough to review, passes relevant checks, and explains why the change exists. Do not combine formatting, dependency upgrades, refactoring, and a feature unless they truly form one change.
+
+## Share and review
+
+```bash
+git push -u origin feature/task-filters
+```
+
+Open a pull request that explains:
+
+- the problem and chosen solution;
+- important decisions or tradeoffs;
+- how the change was tested;
+- screenshots or recordings for interface changes;
+- data migration and rollback considerations; and
+- follow-up work intentionally left out.
+
+Review code, tests, security boundaries, accessibility, performance, observability, and documentation in proportion to the risk.
+
+## Respond to feedback
+
+Treat a review comment as a discussion about the code. Ask when the requested outcome is unclear. Make the change in a focused commit or explain concrete evidence for another approach. Do not resolve someone else's review concern until the agreed work is addressed.
+
+## Keep current
+
+Fetch the remote state and integrate the target branch using the team's chosen merge or rebase policy. Resolve conflicts by understanding both changes, not by automatically choosing one whole side. Run tests again after resolution.
+
+## Protect the main branch
+
+Useful repository controls include:
+
+- required review for pull requests;
+- required CI checks;
+- no direct force pushes;
+- restricted secret and deployment permissions;
+- code owners for high-risk areas; and
+- signed releases or stronger provenance where risk requires it.
+
+## Never commit secrets
+
+If a secret is committed:
+
+1. treat it as exposed;
+2. revoke or rotate it immediately;
+3. determine where it was used;
+4. remove it from current code;
+5. coordinate history cleanup only when needed; and
+6. add scanning or process improvements.
+
+Deleting the line in a later commit does not make the earlier value safe.
+
+<Info>
+Use Git history as communication. A future developer should be able to understand what changed, why it changed, and which tests supported the decision.
+</Info>

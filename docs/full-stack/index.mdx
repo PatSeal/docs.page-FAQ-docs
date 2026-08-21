@@ -1,0 +1,64 @@
+---
+title: Full-Stack Development
+description: Connect the browser, API, and database into one reliable system.
+---
+
+A full-stack application combines frontend, backend, and data storage. This handbook applies OOP to the JavaScript application layers: entities protect rules, controllers translate interfaces, use cases coordinate work, and repository objects isolate persistence.
+
+## Follow one action end to end
+
+For “complete a task”:
+
+1. The user selects a checkbox.
+2. The frontend shows immediate feedback or a loading state.
+3. A `TaskApiClient` sends `PATCH /api/tasks/:taskId` with `{ "completed": true }`.
+4. A server controller authenticates the session and validates transport input.
+5. A `CompleteTask` use case loads the owned `Task` entity through `TaskRepository`.
+6. The entity changes through `complete()`, and the repository saves it atomically.
+7. The server returns the updated task.
+8. The frontend replaces its local task with the server result.
+9. If the request fails, the interface explains the failure and restores a valid state.
+
+Each boundary has a contract. A bug often occurs when two layers disagree about that contract.
+
+## Keep ownership clear
+
+| Concern | Primary owner |
+| --- | --- |
+| Page structure and DOM events | Frontend view objects |
+| Interaction workflow | Frontend controllers |
+| Helpful immediate field feedback | Frontend value objects and views |
+| Trusted validation | Backend validators and value objects |
+| Identity and permission | Authentication services and policy objects |
+| Business rules | Entities and use-case classes |
+| Persistence translation | Repository implementations |
+| Durable facts and constraints | Database |
+| Secrets | Backend or deployment platform |
+| Request tracing and alerts | Backend and infrastructure |
+
+Some concerns appear in several layers for different reasons. For example, the frontend validates for usability, the server validates for trust, and the database constrains final integrity.
+
+## Learn this section
+
+- [OOP and SOLID design](/full-stack/oop-solid-design)
+- [Application architecture](/full-stack/architecture)
+- [Build a task app](/full-stack/task-app)
+- [Testing and debugging](/full-stack/testing-debugging)
+- [Web security](/full-stack/security)
+
+## Definition of done
+
+A feature is not complete when the happy path first works. Also check:
+
+- loading, empty, invalid, unauthorized, not-found, conflict, and failure states;
+- keyboard and screen-reader use;
+- narrow layouts and zoom;
+- concurrent requests and retries where relevant;
+- automated tests at the appropriate boundaries;
+- logs and metrics that reveal production failure; and
+- documentation for the API, configuration, and operational steps.
+- the [OOP review checklist](/reference/oop-checklist) passes without unexplained boundary violations.
+
+<Info>
+The best full-stack developers stay curious at boundaries. They inspect the actual HTTP request, actual SQL query, actual browser state, and actual production signal instead of guessing which layer failed.
+</Info>

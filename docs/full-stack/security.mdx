@@ -1,0 +1,98 @@
+---
+title: Web Security
+description: Protect the main trust boundaries in a full-stack application.
+---
+
+Security is risk management throughout design, development, deployment, and maintenance. OOP helps isolate security responsibilities in validator, authenticator, authorization-policy, secret-provider, and audit objects, but clear object boundaries do not replace a threat model.
+
+## Use a simple threat model
+
+For each feature, ask:
+
+1. What data or capability is valuable?
+2. Who should be able to access it?
+3. Where does untrusted input enter?
+4. How could identity or permission be bypassed?
+5. What happens if a dependency or deployment is compromised?
+6. How will misuse be detected and contained?
+
+Document important decisions and revisit them when the architecture changes.
+
+## Prevent cross-site scripting
+
+Cross-site scripting (XSS) occurs when attacker-controlled content runs as code in another user's browser.
+
+- Render untrusted text through safe text APIs or framework escaping.
+- Avoid assigning untrusted strings to `innerHTML`.
+- Sanitize HTML with a maintained, purpose-built sanitizer when rich text is a real requirement.
+- Validate URLs and avoid dangerous schemes.
+- Use a restrictive Content Security Policy as an additional layer.
+- Keep session identifiers out of JavaScript-readable storage when possible.
+
+Output handling depends on context. HTML text, attributes, URLs, CSS, and JavaScript strings need different rules.
+
+## Prevent injection
+
+Use parameterized queries for SQL. Do not construct shell commands, templates, or language expressions with untrusted strings. When dynamic structure is necessary, select it from a fixed allowlist.
+
+Validate input shape and limit length, nesting, request size, and processing time.
+
+## Protect authentication and sessions
+
+- Use HTTPS everywhere.
+- Hash passwords with a maintained password-hashing implementation.
+- Apply rate limits and detection to authentication attempts.
+- Rotate the session after sign-in or privilege change.
+- Use `HttpOnly`, `Secure`, and an appropriate `SameSite` cookie policy.
+- Expire and revoke sessions.
+- Protect cookie-authenticated state changes against CSRF.
+- Require recent authentication for sensitive account changes.
+
+## Enforce authorization through policy and use-case objects
+
+Check permission for the specific resource inside every protected use case. Inject a focused policy object when the rule is more complex than an ownership-filtered repository operation. Test horizontal privilege escalation, where one ordinary user changes another user's identifier, and vertical escalation, where a user attempts an administrator action.
+
+Default to denial. Give services, database accounts, and people the least privilege needed.
+
+## Configure browsers defensively
+
+Set security headers appropriate to the application, including:
+
+- Content Security Policy;
+- protection against MIME type sniffing;
+- a controlled referrer policy;
+- frame embedding restrictions through CSP; and
+- Strict Transport Security after HTTPS is correctly deployed.
+
+Configure CORS with explicit allowed origins, methods, and headers. Do not reflect arbitrary origins, especially when credentials are allowed.
+
+## Handle files safely
+
+- Limit file size and count.
+- Check both declared and detected type.
+- Generate storage names.
+- Store uploads outside executable application directories.
+- Scan files when the threat model requires it.
+- Serve downloads with safe content types and disposition.
+- Authorize every upload and download.
+- Process untrusted media in an isolated environment.
+
+## Manage secrets and dependencies
+
+Keep secrets out of source, frontend bundles, logs, and build artifacts. Inject a narrowly scoped secret-provider or configuration object only into the infrastructure adapter that needs it. Store values in a managed secret system, restrict access, rotate them, and have a response plan for exposure.
+
+Commit lockfiles, review dependency changes, scan for known vulnerabilities, remove unused packages, and apply supported security updates. A clean scan does not prove a dependency is safe; minimize what you trust.
+
+## Protect availability
+
+Use body size limits, query limits, pagination, timeouts, bounded queues, connection pools, and rate limits. Cache or precompute expensive public work. Design graceful failure so one unavailable dependency does not consume every application resource.
+
+## Log and respond
+
+Record authentication events, permission failures, administrative changes, unusual rate-limit activity, and important data exports or deletions. Protect logs against tampering and restrict access. Do not log secrets or more personal data than the investigation requires.
+
+Prepare an incident process: contain, preserve evidence, rotate credentials, fix the cause, notify the right parties, recover, and improve controls afterward.
+
+<Warning>
+Security headers, a web application firewall, and automated scanners are useful layers, but none can compensate for missing authorization or unsafe data handling in application code.
+</Warning>

@@ -1,0 +1,89 @@
+---
+title: Web Fundamentals
+description: Learn the three core browser technologies and how they work together.
+---
+
+Every web interface is built on three technologies:
+
+- **HTML** describes the content and its meaning.
+- **CSS** controls presentation and layout.
+- **JavaScript** changes the page and responds to events.
+
+Frameworks can make large applications easier to organize, but they do not replace these foundations. Strong fundamentals make every framework easier to learn and debug.
+
+## Keep responsibilities clear
+
+Suppose a page contains a sign-up button:
+
+```html
+<button class="signup-button" type="button">Join now</button>
+```
+
+HTML makes it a real button. CSS changes how it looks:
+
+```css
+.signup-button {
+  color: white;
+  background: rebeccapurple;
+}
+```
+
+JavaScript defines what happens when it is selected. The behavior is owned by a small controller object:
+
+```js
+class SignUpButtonController {
+  constructor({ button, dialog }) {
+    this.button = button;
+    this.dialog = dialog;
+  }
+
+  start() {
+    this.button.addEventListener('click', this.openDialog);
+  }
+
+  openDialog = () => {
+    this.dialog.showModal();
+  };
+}
+```
+
+Keeping these roles clear produces code that is easier to understand and maintain. The controller receives its collaborators rather than creating or searching for them.
+
+## Study sequence
+
+1. [HTML](/fundamentals/html): structure a page with meaningful elements.
+2. [CSS](/fundamentals/css): understand the cascade, box model, and layout.
+3. [Responsive design](/fundamentals/responsive-design): support many screen sizes.
+4. [JavaScript](/fundamentals/javascript): work with values, decisions, methods, and asynchronous tasks.
+5. [Object-oriented JavaScript](/fundamentals/object-oriented-javascript): model behavior with encapsulation, abstraction, composition, and polymorphism.
+6. [The DOM and events](/fundamentals/dom-and-events): connect controller and view objects to the page.
+
+## Practice project
+
+Build a personal reading list with:
+
+- a heading and introductory text;
+- a form for a book title and author;
+- a responsive grid of book cards;
+- an accessible remove button on every card; and
+- a `Book` entity and `ReadingList` collection;
+- `BookFormView` and `BookListView` objects; and
+- a `ReadingListController` that adds and removes books.
+
+Begin with hard-coded HTML. Add CSS only after the structure makes sense. Add JavaScript only after the static layout works.
+
+## Readiness check
+
+Before moving to frontend architecture, make sure you can:
+
+- choose semantic HTML instead of using generic elements for everything;
+- explain margin, border, padding, and content;
+- build a layout with Flexbox or Grid;
+- make the layout usable on a narrow screen;
+- create classes with focused responsibilities and protected invariants;
+- connect objects through constructor injection; and
+- respond to browser events through controllers without placing JavaScript inside HTML attributes.
+
+<Info>
+“Vanilla JavaScript” means JavaScript used without an additional frontend framework. It is still modern, capable JavaScript.
+</Info>

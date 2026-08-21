@@ -1,0 +1,167 @@
+---
+title: Validation and Errors
+description: Reject bad input clearly and handle failures without leaking sensitive details.
+---
+
+Validation protects the application's assumptions. Error handling turns expected failures into stable responses and unexpected failures into useful diagnostics.
+
+## Validate at the boundary
+
+Before business logic runs, check:
+
+- required and unknown fields;
+- types, ranges, lengths, and formats;
+- enum values such as `open` or `complete`;
+- relationships between fields; and
+- request body and upload size limits.
+
+After basic validation, apply business rules such as “only a project owner can archive this project.”
+
+Normalize carefully. Trimming a title is sensible; silently changing a user's identifier or accepting ambiguous date input can be harmful.
+
+## Hide the schema library behind a validator object
+
+For a larger API, a validation library can define the contract in one place. In simplified pseudocode:
+
+```js
+export class CreateTaskValidator {
+  constructor({ schemaLibrary }) {
+    this.schema = schemaLibrary.object({
+      title: schemaLibrary.string().trim().min(2).max(120),
+      dueDate: schemaLibrary.isoDate().optional(),
+      priority: schemaLibrary.enum(['low', 'normal', 'high']).default('normal'),
+    }).strict();
+  }
+
+  validate(input) {
+    const result = this.schema.safeParse(input);
+
+    if (!result.success) {
+      throw new ValidationError({ details: result.errors });
+    }
+
+    return result.data;
+  }
+}
+```
+
+The important behavior is independent of the library:
+
+- reject values with the wrong type;
+- choose whether unknown fields are rejected or removed;
+- return field-specific messages; and
+- keep the server contract explicit and tested.
+
+The controller depends on `CreateTaskValidator`, not directly on one third-party schema API.
+
+## Create known application error objects
+
+```js
+export class ApplicationError extends Error {
+  constructor({ code, message, details }) {
+    super(message);
+    this.code = code;
+    this.details = details;
+  }
+}
+
+export class ValidationError extends ApplicationError {
+  constructor({ details }) {
+    super({
+      code: 'VALIDATION_FAILED',
+      message: 'Check the highlighted fields.',
+      details,
+    });
+  }
+}
+
+export class TaskNotFoundError extends ApplicationError {
+  constructor() {
+    super({ code: 'TASK_NOT_FOUND', message: 'Task not found.' });
+  }
+}
+```
+
+Business code can throw a known error:
+
+```js
+throw new TaskNotFoundError();
+```
+
+## Centralize response translation
+
+An error middleware object translates application error types into HTTP. Application errors do not contain HTTP status codes:
+
+```js
+export class ErrorMiddleware {
+  constructor({ logger, errorStatusMap }) {
+    this.logger = logger;
+    this.errorStatusMap = errorStatusMap;
+  }
+
+  handle = (error, request, response, next) => {
+    if (error instanceof ApplicationError) {
+      const status = this.errorStatusMap.get(error.code) ?? 400;
+
+      return response.status(status).json({
+        error: {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          requestId: request.id,
+        },
+      });
+    }
+
+    this.logger.error({ error, requestId: request.id });
+
+    return response.status(500).json({
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'An unexpected error occurred.',
+        requestId: request.id,
+      },
+    });
+  };
+}
+
+const errorMiddleware = new ErrorMiddleware({
+  logger,
+  errorStatusMap: new Map([
+    ['VALIDATION_FAILED', 422],
+    ['TASK_NOT_FOUND', 404],
+  ]),
+});
+
+app.use(errorMiddleware.handle);
+```
+
+Do not return stack traces, raw database errors, filesystem paths, or secret values to the client. Log the internal detail in a protected system.
+
+## Handle asynchronous errors
+
+Controller methods catch rejected Promises and delegate them to `next(error)`, or use framework support with the same observable result. The route must not leave a request hanging or create an unhandled rejection.
+
+## Distinguish operational and programming errors
+
+An **operational error** is an expected condition such as invalid input, a missing record, or an unavailable dependency. Handle it with a planned status and message.
+
+A **programming error** is a bug such as accessing a property of `undefined`. Record enough context to diagnose it, return a generic `500` response, and alert the team when appropriate.
+
+## Timeouts and dependency failures
+
+Every network dependency can be slow or unavailable. Put timeout and retry behavior inside its adapter object, inject the policy, and expose an application-owned error. Never retry indefinitely. A retry can multiply an outage or duplicate a non-idempotent operation.
+
+## Log with context
+
+Useful structured fields include:
+
+- timestamp and severity;
+- request or trace ID;
+- route and method;
+- authenticated user ID when permitted;
+- duration and status;
+- error code and stack for internal failures; and
+- dependency name when an external call fails.
+
+Do not log passwords, session tokens, full authorization headers, payment data, or unnecessary personal information.

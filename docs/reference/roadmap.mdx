@@ -1,0 +1,136 @@
+---
+title: Learning Roadmap
+description: Learn full-stack web development through a sequence of practical projects.
+---
+
+This roadmap is ordered by dependency, not by calendar time. Spend longer on a stage when the project still feels mysterious. Move ahead when you can build a small version and explain the main decisions.
+
+## Stage 1: Web and tools
+
+Learn:
+
+- clients, servers, URLs, DNS, HTTP, and HTTPS;
+- editor, terminal, browser developer tools, and local server;
+- files, paths, and basic Git workflow.
+
+Build: a small multi-page personal site with working navigation.
+
+Ready when: you can explain what happens after entering a URL and use the Network panel to inspect the page resources.
+
+## Stage 2: Semantic HTML
+
+Learn:
+
+- document structure, landmarks, headings, lists, links, and images;
+- forms, labels, controls, validation attributes, and tables;
+- keyboard behavior and useful alternative text.
+
+Build: a recipe or event site with a contact form.
+
+Ready when: the page remains understandable without CSS and can be navigated with a keyboard.
+
+## Stage 3: CSS and responsive design
+
+Learn:
+
+- cascade, specificity, inheritance, box model, and normal flow;
+- Flexbox, Grid, custom properties, and states;
+- flexible sizing, media queries, container queries, and user preferences.
+
+Build: a responsive product or course catalog.
+
+Ready when: you can reproduce a layout from a reference and explain why each layout rule exists.
+
+## Stage 4: JavaScript and OOP fundamentals
+
+Learn:
+
+- values, arrays, objects, decisions, methods, and modules;
+- classes, private fields, entities, value objects, and protected invariants;
+- encapsulation, abstraction, composition, inheritance, and polymorphism;
+- Promises, `async`/`await`, error handling, and Fetch.
+
+Build: a reading list with `Book`, `ReadingList`, storage-adapter, view, and controller classes.
+
+Ready when: you can protect state behind methods, inject a storage adapter, replace it with a fake, and explain why composition is preferred over unrelated inheritance.
+
+## Stage 5: Frontend application design
+
+Learn:
+
+- entities, collections, view objects, controllers, and API client adapters;
+- constructor injection, composition roots, and explicit state ownership;
+- API data lifecycles and form-view feedback;
+- accessibility testing and performance measurement;
+- one framework only after understanding the platform.
+
+Build: a dashboard that consumes a public API and handles loading, empty, success, and error states.
+
+Ready when: you can trace an event from view to controller to API client and split responsibilities without global singletons or god objects.
+
+## Stage 6: Backend and HTTP APIs
+
+Learn:
+
+- Node.js or another server runtime;
+- HTTP controllers, use cases, entities, value objects, and repository contracts;
+- dependency inversion, polymorphic adapters, validation objects, and error objects;
+- authentication services, session stores, permission policies, rate limits, and timeouts.
+
+Build: a tested task API using in-memory data first.
+
+Ready when: you can replace an in-memory repository with another implementation without changing a use case, reject invalid requests, and enforce permission in application objects.
+
+## Stage 7: SQL and durable data
+
+Learn:
+
+- tables, keys, relationships, constraints, and indexes;
+- `SELECT`, `INSERT`, `UPDATE`, `DELETE`, joins, and aggregation;
+- repository implementations, row-to-entity mapping, units of work, migrations, transactions, parameterized queries, and backups.
+
+Build: replace the task API's memory store with a relational database.
+
+Ready when: you can implement an application-owned repository contract, map rows into entities, explain constraints, and group related object changes in a transaction.
+
+## Stage 8: Full-stack integration
+
+Learn:
+
+- SOLID design, composition roots, dependency direction, shared API contracts, and environment configuration;
+- cookie sessions, CSRF protection, CORS, and origin choices;
+- integration and browser testing;
+- systematic debugging across layers.
+
+Build: the complete [task application](/full-stack/task-app) with accounts.
+
+Ready when: you can trace one user action through view, controller, API client, HTTP controller, use case, entity, repository, SQL, and back to the rendered state.
+
+## Stage 9: Production and operations
+
+Learn:
+
+- builds, artifacts, domains, HTTPS, and secret management;
+- CI/CD, backward-compatible migrations, and rollback;
+- logs, metrics, traces, alerts, backups, and incident response.
+
+Build: deploy the task application, observe it, and practice restoring its database.
+
+Ready when: another developer can release and recover the application using your documentation.
+
+## Build a portfolio with depth
+
+Three well-finished projects show more than ten unfinished tutorials. For each project include:
+
+- a clear problem and target user;
+- accessible, responsive interface states;
+- tested business rules and permissions;
+- a documented object model, dependency direction, and SOLID tradeoffs;
+- a documented data model and API;
+- a live deployment with sample access;
+- a concise README with setup and architecture; and
+- a reflection on tradeoffs and what you would improve.
+
+<Info>
+Return to earlier stages while building later ones. Real learning is a spiral: every backend project gives you a reason to improve HTTP, JavaScript, HTML, and debugging again.
+</Info>

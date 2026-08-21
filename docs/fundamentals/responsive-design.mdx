@@ -1,0 +1,124 @@
+---
+title: Responsive Design
+description: Build interfaces that adapt to devices, content, and user preferences.
+---
+
+Responsive design allows one interface to work across different screen sizes and input methods. It is not the work of shrinking a desktop page; it is the work of creating flexible rules.
+
+## Start with a flexible base
+
+Use normal flow, relative sizing, and flexible media before adding breakpoints:
+
+```css
+img,
+video {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.content {
+  width: min(100% - 2rem, 70rem);
+  margin-inline: auto;
+}
+```
+
+Avoid fixed page widths and fixed heights for containers that hold text. Text can wrap differently when the screen, font, language, or zoom level changes.
+
+## Use mobile-first media queries
+
+Write the simple narrow layout first, then enhance it when space is available:
+
+```css
+.layout {
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (min-width: 48rem) {
+  .layout {
+    grid-template-columns: 16rem 1fr;
+  }
+}
+```
+
+Choose a breakpoint when the content becomes uncomfortable, not because a particular device model has that width.
+
+## Prefer content-driven components
+
+Grid can often adapt without a media query:
+
+```css
+.products {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 1rem;
+}
+```
+
+Container queries let a component respond to its own available width instead of the full viewport:
+
+```css
+.card-wrapper {
+  container-type: inline-size;
+}
+
+@container (min-width: 30rem) {
+  .card {
+    display: grid;
+    grid-template-columns: 10rem 1fr;
+  }
+}
+```
+
+Use them when the same component appears in differently sized page regions.
+
+## Responsive type and spacing
+
+`clamp()` sets a flexible value with limits:
+
+```css
+h1 {
+  font-size: clamp(2rem, 5vw, 4rem);
+}
+
+section {
+  padding-block: clamp(2rem, 8vw, 6rem);
+}
+```
+
+The first value is the minimum, the middle value grows with the viewport, and the final value is the maximum.
+
+## Support user preferences
+
+Some users request less motion or a different color scheme:
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+```
+
+Do not make important information depend only on animation, hover, or color.
+
+## Test real constraints
+
+Test more than a few preset device widths:
+
+- drag the viewport slowly from narrow to wide;
+- zoom to 200%;
+- increase the browser's default text size;
+- use long names and translated text;
+- navigate with a keyboard;
+- test both touch and pointer input when possible; and
+- try slow network and CPU settings in developer tools.
+
+<Info>
+A responsive page has no horizontal scrolling at ordinary zoom, except where the content genuinely requires it, such as a wide data table.
+</Info>

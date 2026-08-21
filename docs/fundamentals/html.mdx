@@ -1,0 +1,128 @@
+---
+title: "HTML: Structure and Meaning"
+description: Create pages that browsers, search engines, and assistive technology can understand.
+---
+
+HTML stands for **HyperText Markup Language**. It labels content so software can understand whether something is a heading, paragraph, link, image, form, or another type of information.
+
+## A complete document
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="A clear description of this page." />
+    <title>Page title</title>
+  </head>
+  <body>
+    <header>...</header>
+    <main>...</main>
+    <footer>...</footer>
+  </body>
+</html>
+```
+
+- `<!doctype html>` selects modern HTML behavior.
+- `lang` identifies the document language.
+- `charset` supports Unicode text.
+- `viewport` makes mobile layout behave as expected.
+- `title` names the browser tab and search result.
+- `main` contains the unique primary content.
+
+## Elements and attributes
+
+An element normally has an opening tag, content, and closing tag:
+
+```html
+<p>Learn one concept at a time.</p>
+```
+
+Attributes add information:
+
+```html
+<a href="/courses/html" class="course-link">Learn HTML</a>
+```
+
+Here, `href` gives the link destination and `class` provides a reusable styling or scripting hook.
+
+## Use semantic elements
+
+Semantic elements communicate their purpose:
+
+| Element | Use it for |
+| --- | --- |
+| `header` | Introductory content for a page or section |
+| `nav` | A major group of navigation links |
+| `main` | The page's unique main content |
+| `section` | A themed group, usually with a heading |
+| `article` | Self-contained content that can stand alone |
+| `aside` | Related but secondary content |
+| `footer` | Closing information for a page or section |
+| `button` | An action on the current page |
+| `a` | Navigation to another location |
+
+Use a link to go somewhere and a button to do something. Styling a `div` to look clickable does not give it keyboard behavior or meaning.
+
+## Headings create an outline
+
+Use one clear `h1` for the page topic, then nest later headings without skipping levels for visual size:
+
+```html
+<main>
+  <h1>Web development courses</h1>
+
+  <section>
+    <h2>Frontend courses</h2>
+    <h3>HTML fundamentals</h3>
+  </section>
+</main>
+```
+
+Change visual size with CSS, not by choosing the wrong heading level.
+
+## Images
+
+Give informative images concise alternative text:
+
+```html
+<img
+  src="team-planning.webp"
+  alt="Four developers planning tasks on a whiteboard"
+  width="1200"
+  height="800"
+  loading="lazy"
+/>
+```
+
+Use `alt=""` for a purely decorative image so a screen reader can skip it. Explicit width and height help the browser reserve space before the image loads.
+
+## Forms and labels
+
+Every control needs an accessible name. A visible label is usually best:
+
+```html
+<form action="/subscribe" method="post">
+  <div>
+    <label for="email">Email address</label>
+    <input id="email" name="email" type="email" autocomplete="email" required />
+  </div>
+
+  <button type="submit">Subscribe</button>
+</form>
+```
+
+The `name` becomes the submitted field key. The `type` helps the browser validate input and show an appropriate mobile keyboard. Server-side validation is still required.
+
+## Avoid these common mistakes
+
+- Do not use placeholder text as the only form label.
+- Do not put block-level interactive elements inside other interactive elements.
+- Do not add a click handler to a non-interactive element when a button works.
+- Do not use repeated `id` values; each ID must be unique in a page.
+- Do not choose HTML based only on its default appearance.
+
+## Practice
+
+Mark up a recipe with a page header, navigation, main heading, description, ingredient list, ordered steps, image, preparation notes, and footer. Read it with CSS disabled. The order and meaning should still be clear.

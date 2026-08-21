@@ -1,0 +1,126 @@
+---
+title: Tooling and Modules
+description: Use packages and development tools without losing sight of the browser code they produce.
+---
+
+Frontend tooling can resolve modules, transform newer syntax, process assets, run tests, and create optimized production files. Add tools to solve known needs, not as a substitute for understanding the code.
+
+## JavaScript modules
+
+Modules make dependencies explicit:
+
+```js
+// infrastructure/task-api-client.js
+export class TaskApiClient {
+  constructor({ fetchImplementation = fetch }) {
+    this.fetchImplementation = fetchImplementation;
+  }
+
+  async list() {
+    const response = await this.fetchImplementation('/api/tasks');
+    if (!response.ok) throw new Error('Could not load tasks.');
+    return response.json();
+  }
+}
+```
+
+```js
+// composition-root.js
+import { TaskApiClient } from './infrastructure/task-api-client.js';
+import { TaskPageController } from './ui/task-page-controller.js';
+
+const taskPageController = new TaskPageController({
+  taskApiClient: new TaskApiClient({}),
+  taskListView: new TaskListView({ root: document.querySelector('#task-list') }),
+});
+
+taskPageController.load();
+```
+
+In a no-build browser project:
+
+```html
+<script type="module" src="/src/main.js"></script>
+```
+
+Module scripts are deferred automatically and have their own scope.
+
+## Packages and package managers
+
+A package is reusable code distributed through a registry. A package manager installs it and records the dependency.
+
+Typical commands in a Node-based project are:
+
+```bash
+npm init -y
+npm install express
+npm install --save-dev eslint
+npm run test
+```
+
+The `package.json` file describes the project:
+
+```json
+{
+  "name": "task-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "your-development-command",
+    "test": "your-test-command",
+    "build": "your-production-build-command"
+  }
+}
+```
+
+- `dependencies` are required when the application runs.
+- `devDependencies` support development, testing, or building.
+- scripts provide shared names for project commands.
+- a lockfile records the exact resolved dependency tree and should normally be committed.
+
+## Development server and build tool
+
+A development server usually provides:
+
+- an HTTP origin such as `http://localhost:5173`;
+- automatic refresh after a change;
+- understandable error output; and
+- module and asset handling.
+
+A production build usually creates optimized files in a directory such as `dist/`. The browser receives those output files, not your development server.
+
+## Linting and formatting
+
+A linter detects suspicious patterns. A formatter applies consistent layout. They solve different problems.
+
+Use project scripts so every contributor and CI run uses the same commands:
+
+```json
+{
+  "scripts": {
+    "lint": "eslint src",
+    "format:check": "prettier --check .",
+    "test": "vitest run"
+  }
+}
+```
+
+Pin and update tools deliberately. Read release notes for major upgrades rather than allowing unrelated automated changes to land without review.
+
+## Environment variables
+
+Frontend build tools may replace selected environment variables during a build. Any value included in browser JavaScript is public, even if it came from a `.env` file.
+
+Safe frontend configuration includes an API base URL or public analytics identifier. Database passwords, private API keys, and signing secrets belong only on the server.
+
+## Keep the dependency surface small
+
+Before adding a package, ask:
+
+- Is the browser platform already sufficient?
+- Does the package solve a meaningful amount of work?
+- Is it maintained and documented?
+- What size and security cost does it add?
+- Can the team support upgrades and migration later?
+
+Every dependency is code you ship, execute, update, and trust. Wrap a third-party dependency in an application-owned adapter when its API would otherwise spread across the codebase.
