@@ -1,0 +1,152 @@
+---
+title: Safe Data Access
+description: Use parameters, transactions, pools, and clear repository boundaries.
+---
+
+Data-access code translates application operations into database queries. It should make ownership, transaction boundaries, and returned fields explicit.
+
+## Always parameterize values
+
+Unsafe string construction mixes data with SQL code:
+
+```js
+// Never do this.
+const sql = `SELECT * FROM users WHERE email = '${email}'`;
+```
+
+Keep parameterized SQL inside a repository adapter:
+
+```js
+class PostgresUserRepository {
+  constructor({ pool }) {
+    this.pool = pool;
+  }
+
+  async findByEmail(email) {
+    const result = await this.pool.query(
+      `SELECT id, email, password_hash
+       FROM users
+       WHERE lower(email) = lower($1)`,
+      [email],
+    );
+
+    return result.rows[0] ? this.toEntity(result.rows[0]) : null;
+  }
+
+  toEntity(row) {
+    return new User({
+      id: row.id,
+      email: row.email,
+      passwordHash: row.password_hash,
+    });
+  }
+}
+```
+
+Parameters protect values, not identifiers such as a table name or sort direction. For dynamic identifiers, choose from a fixed allowlist and construct only the approved fragment.
+
+## Use a connection pool
+
+Opening a new database connection for every request is expensive. A pool reuses a limited number of connections.
+
+Configure it with environment-specific connection details, encryption where required, a bounded maximum size, and timeouts. The total pool size across all application instances must fit within the database's connection capacity.
+
+## Create focused repository classes
+
+```js
+export class PostgresTaskRepository extends TaskRepository {
+  constructor({ database }) {
+    super();
+    this.database = database;
+  }
+
+  async findByOwner(ownerId, limit = 50) {
+    const result = await this.database.query(
+      `SELECT id, owner_id, title, completed, due_at, created_at, updated_at
+       FROM tasks
+       WHERE owner_id = $1
+       ORDER BY created_at DESC
+       LIMIT $2`,
+      [ownerId, limit],
+    );
+
+    return result.rows.map((row) => this.toEntity(row));
+  }
+
+  toEntity(row) {
+    return new Task({
+      id: row.id,
+      ownerId: row.owner_id,
+      title: new TaskTitle(row.title),
+      completed: row.completed,
+      dueAt: row.due_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    });
+  }
+}
+```
+
+Inject the database dependency explicitly. Map database rows into domain objects instead of exposing driver results to use cases.
+
+## Group related writes in a transaction
+
+```js
+class CreateProjectWithOwner {
+  constructor({ unitOfWorkFactory, projectFactory }) {
+    this.unitOfWorkFactory = unitOfWorkFactory;
+    this.projectFactory = projectFactory;
+  }
+
+  async execute({ projectInput, ownerId }) {
+    const unitOfWork = await this.unitOfWorkFactory.open();
+
+    try {
+      const project = this.projectFactory.create(projectInput);
+      await unitOfWork.projects.save(project);
+      await unitOfWork.projectMembers.addOwner(project.id, ownerId);
+      await unitOfWork.commit();
+      return project;
+    } catch (error) {
+      await unitOfWork.rollback();
+      throw error;
+    } finally {
+      unitOfWork.release();
+    }
+  }
+}
+```
+
+The unit-of-work adapter creates repositories that share one checked-out connection. Keep transactions short; do not wait for user input or a slow external HTTP call while holding one open.
+
+## Avoid the N+1 query problem
+
+N+1 occurs when code loads a collection with one query and then sends another query for every item. For 100 tasks, that becomes 101 queries.
+
+Instead, use a join, an aggregate, or a second query that fetches all related rows with one set of IDs. Confirm the best option with actual query plans and response needs.
+
+## Handle concurrency intentionally
+
+Two requests can read the same state and then both write based on it. Solutions include:
+
+- an atomic SQL update;
+- a unique constraint;
+- a transaction with an appropriate isolation level;
+- row locking for carefully selected workflows; or
+- optimistic concurrency using a version number or update timestamp.
+
+Let the database enforce uniqueness and let the repository translate the resulting conflict into an application error object. A “check then insert” in application code alone has a race condition.
+
+## Protect data in every environment
+
+- Use separate credentials for development, tests, and production.
+- Give the application only the permissions it needs.
+- Keep credentials in a secret manager or protected environment configuration.
+- Encrypt network connections.
+- Mask personal data in logs and non-production copies.
+- Record and review privileged access.
+- Plan retention, export, and deletion requirements.
+
+<Info>
+An ORM or query builder can improve productivity, but it does not remove the need to understand SQL, indexes, transactions, generated queries, and database limits.
+</Info>

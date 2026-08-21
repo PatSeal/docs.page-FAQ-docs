@@ -1,0 +1,127 @@
+---
+title: SQL and Schema Design
+description: Create constrained tables and write the core queries for a task application.
+---
+
+SQL is a language for defining, reading, and changing relational data. The examples use PostgreSQL-style syntax; small details vary between database systems.
+
+## Create the schema
+
+```sql
+CREATE TABLE users (
+  id uuid PRIMARY KEY,
+  email text NOT NULL,
+  password_hash text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT users_email_not_blank CHECK (length(trim(email)) > 3)
+);
+
+CREATE UNIQUE INDEX users_email_unique
+  ON users (lower(email));
+
+CREATE TABLE tasks (
+  id uuid PRIMARY KEY,
+  owner_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title varchar(120) NOT NULL,
+  completed boolean NOT NULL DEFAULT false,
+  due_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT tasks_title_not_blank CHECK (length(trim(title)) >= 2)
+);
+
+CREATE INDEX tasks_owner_created_idx
+  ON tasks (owner_id, created_at DESC);
+```
+
+The application supplies UUID values before insertion. `timestamptz` represents an instant in time; convert it to the user's time zone when displaying it.
+
+## Insert a row
+
+```sql
+INSERT INTO tasks (id, owner_id, title)
+VALUES ($1, $2, $3)
+RETURNING id, owner_id, title, completed, due_at, created_at, updated_at;
+```
+
+`$1`, `$2`, and `$3` are parameters. The database driver sends values separately from SQL syntax.
+
+## Read a user's tasks
+
+```sql
+SELECT id, title, completed, due_at, created_at, updated_at
+FROM tasks
+WHERE owner_id = $1
+ORDER BY created_at DESC
+LIMIT $2;
+```
+
+Selecting named columns documents the response and avoids sending fields that the caller does not need.
+
+## Filter and count
+
+```sql
+SELECT
+  count(*) AS total,
+  count(*) FILTER (WHERE completed) AS complete,
+  count(*) FILTER (WHERE NOT completed) AS open
+FROM tasks
+WHERE owner_id = $1;
+```
+
+Aggregation reduces data in the database instead of transferring every row only to count it in application code.
+
+## Update with an ownership check
+
+```sql
+UPDATE tasks
+SET completed = $1,
+    updated_at = now()
+WHERE id = $2
+  AND owner_id = $3
+RETURNING id, title, completed, due_at, created_at, updated_at;
+```
+
+Including `owner_id` makes authorization part of the data operation. If no row returns, the task is missing or belongs to someone else.
+
+## Delete safely
+
+```sql
+DELETE FROM tasks
+WHERE id = $1
+  AND owner_id = $2
+RETURNING id;
+```
+
+A `DELETE` without an intentional `WHERE` clause affects every row. Review data-changing queries carefully and use a transaction for multi-step changes.
+
+## Join related data
+
+```sql
+SELECT
+  tasks.id,
+  tasks.title,
+  tasks.completed,
+  users.email AS owner_email
+FROM tasks
+JOIN users ON users.id = tasks.owner_id
+WHERE tasks.id = $1;
+```
+
+Table aliases can shorten larger queries, but use clear names while learning.
+
+## Evolve schema with migrations
+
+A migration is a versioned, reviewed schema change. A typical migration:
+
+1. adds or changes a table, column, constraint, or index;
+2. includes a safe rollout plan for existing data;
+3. is tested on a production-like dataset;
+4. is applied by one controlled deployment process; and
+5. has a recovery plan.
+
+Large changes often need stages. For example, add a nullable column, deploy code that writes it, backfill old rows, then add `NOT NULL` in a later migration.
+
+<Warning>
+Do not edit a migration that has already run in shared environments. Add a new migration so every environment has an auditable sequence.
+</Warning>

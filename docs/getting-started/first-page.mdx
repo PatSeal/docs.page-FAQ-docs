@@ -1,0 +1,137 @@
+---
+title: Build Your First Page
+description: Connect HTML, CSS, and JavaScript in one small project.
+---
+
+This page builds a tiny task counter. It shows the three frontend technologies working together without a framework.
+
+## 1. Add the HTML
+
+Create `index.html`:
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Task Starter</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="card">
+      <h1>Today’s tasks</h1>
+      <p>You have completed <strong id="count">0</strong> tasks.</p>
+      <button id="complete-button" type="button">Complete a task</button>
+    </main>
+    <script src="script.js"></script>
+  </body>
+</html>
+```
+
+The HTML describes meaning and structure: a main content area, a heading, a paragraph, and a button.
+
+## 2. Add the CSS
+
+Create `styles.css`:
+
+```css
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  font-family: system-ui, sans-serif;
+  color: #1f2937;
+  background: #f5f3ff;
+}
+
+.card {
+  width: min(90%, 32rem);
+  padding: 2rem;
+  border-radius: 1rem;
+  background: white;
+  box-shadow: 0 1rem 2rem rgb(31 41 55 / 12%);
+}
+
+button {
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-radius: 0.5rem;
+  color: white;
+  background: #7c3aed;
+  cursor: pointer;
+}
+
+button:focus-visible {
+  outline: 3px solid #f59e0b;
+  outline-offset: 3px;
+}
+```
+
+The CSS creates layout, spacing, color, and a visible keyboard focus style.
+
+## 3. Add the JavaScript
+
+Create `script.js`. Even this small example keeps its state private and exposes behavior through an object:
+
+```js
+class TaskCounter {
+  #completedTasks = 0;
+
+  constructor({ countElement, completeButton }) {
+    this.countElement = countElement;
+    this.completeButton = completeButton;
+  }
+
+  start() {
+    this.completeButton.addEventListener('click', this.handleComplete);
+    this.render();
+  }
+
+  handleComplete = () => {
+    this.#completedTasks += 1;
+    this.render();
+  };
+
+  render() {
+    this.countElement.textContent = this.#completedTasks;
+  }
+}
+
+const taskCounter = new TaskCounter({
+  countElement: document.querySelector('#count'),
+  completeButton: document.querySelector('#complete-button'),
+});
+
+taskCounter.start();
+```
+
+`TaskCounter` encapsulates the count, owns the event handling, and renders its state. The two DOM elements are injected through the constructor, so the class does not search the document internally.
+
+## 4. Run and inspect it
+
+Open the page or start your local server. Select the button several times. Then open developer tools:
+
+- use **Elements** to inspect the HTML;
+- use **Styles** to temporarily change a color;
+- use **Console** to look for JavaScript errors; and
+- use **Network** to see the HTML, CSS, and JavaScript requests.
+
+## 5. Make it your own
+
+Try these changes one at a time:
+
+1. Change the heading and colors.
+2. Add a public `reset()` method and connect it to a second button.
+3. Create a `CompletionLimit` value object that prevents a count above five.
+4. Inject a `ProgressMessageView` object that changes the message at five.
+5. Inject a `CounterStorage` adapter backed by `localStorage`.
+
+<Info>
+When something fails, read the first console error, locate its file and line, and check spelling before making larger changes.
+</Info>

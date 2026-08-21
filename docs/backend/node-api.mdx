@@ -1,0 +1,404 @@
+---
+title: Build an Object-Oriented Node API
+description: Create a layered JSON API with entities, use cases, repositories, controllers, and dependency injection.
+---
+
+Node.js runs JavaScript outside the browser. Express is an HTTP adapter. The application's rules remain in ordinary classes that do not depend on Express.
+
+## Create the project
+
+```bash
+mkdir task-api
+cd task-api
+npm init -y
+npm install express
+```
+
+Add `"type": "module"` and scripts to `package.json`:
+
+```json
+{
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js"
+  }
+}
+```
+
+Use this structure:
+
+```text
+src/
+  domain/task.js
+  application/task-repository.js
+  application/task-use-cases.js
+  infrastructure/in-memory-task-repository.js
+  interfaces/task-http-controller.js
+  interfaces/express-app.js
+  composition-root.js
+  server.js
+```
+
+## 1. Create the domain objects
+
+`src/domain/task.js`:
+
+```js
+export class DomainValidationError extends Error {
+  constructor(message) {
+    super(message);
+    this.code = 'VALIDATION_FAILED';
+  }
+}
+
+export class TaskTitle {
+  #value;
+
+  constructor(value) {
+    const normalized = String(value).trim();
+
+    if (normalized.length < 2 || normalized.length > 120) {
+      throw new DomainValidationError('Task title must contain 2 to 120 characters.');
+    }
+
+    this.#value = normalized;
+  }
+
+  toString() {
+    return this.#value;
+  }
+}
+
+export class Task {
+  #id;
+  #title;
+  #completed;
+  #createdAt;
+
+  constructor({ id, title, completed = false, createdAt = new Date() }) {
+    this.#id = id;
+    this.#title = title instanceof TaskTitle ? title : new TaskTitle(title);
+    this.#completed = Boolean(completed);
+    this.#createdAt = createdAt;
+  }
+
+  get id() {
+    return this.#id;
+  }
+
+  get title() {
+    return this.#title;
+  }
+
+  get completed() {
+    return this.#completed;
+  }
+
+  get createdAt() {
+    return new Date(this.#createdAt);
+  }
+
+  complete() {
+    this.#completed = true;
+  }
+
+  reopen() {
+    this.#completed = false;
+  }
+
+  toJSON() {
+    return {
+      id: this.id,
+      title: this.title.toString(),
+      completed: this.completed,
+      createdAt: this.createdAt.toISOString(),
+    };
+  }
+}
+```
+
+The entity protects its state and provides domain operations. It knows nothing about HTTP or storage.
+
+## 2. Define a repository contract
+
+`src/application/task-repository.js`:
+
+```js
+export class TaskRepository {
+  async findAll() {
+    throw new Error('TaskRepository.findAll must be implemented.');
+  }
+
+  async findById() {
+    throw new Error('TaskRepository.findById must be implemented.');
+  }
+
+  async save() {
+    throw new Error('TaskRepository.save must be implemented.');
+  }
+}
+```
+
+Application classes depend on this contract. They do not depend on a map, SQL driver, or database library.
+
+## 3. Implement an in-memory repository
+
+`src/infrastructure/in-memory-task-repository.js`:
+
+```js
+import { TaskRepository } from '../application/task-repository.js';
+
+export class InMemoryTaskRepository extends TaskRepository {
+  #tasks = new Map();
+
+  async findAll() {
+    return [...this.#tasks.values()];
+  }
+
+  async findById(taskId) {
+    return this.#tasks.get(taskId) ?? null;
+  }
+
+  async save(task) {
+    this.#tasks.set(task.id, task);
+    return task;
+  }
+}
+```
+
+This implementation is polymorphic with a future `PostgresTaskRepository` because both honor the same contract.
+
+## 4. Create use-case classes
+
+`src/application/task-use-cases.js`:
+
+```js
+import { Task, TaskTitle } from '../domain/task.js';
+
+export class CreateTask {
+  constructor({ taskRepository, idGenerator, clock }) {
+    this.taskRepository = taskRepository;
+    this.idGenerator = idGenerator;
+    this.clock = clock;
+  }
+
+  async execute({ title }) {
+    const task = new Task({
+      id: this.idGenerator.next(),
+      title: new TaskTitle(title),
+      createdAt: this.clock.now(),
+    });
+
+    return this.taskRepository.save(task);
+  }
+}
+
+export class ListTasks {
+  constructor({ taskRepository }) {
+    this.taskRepository = taskRepository;
+  }
+
+  async execute() {
+    return this.taskRepository.findAll();
+  }
+}
+
+export class CompleteTask {
+  constructor({ taskRepository }) {
+    this.taskRepository = taskRepository;
+  }
+
+  async execute({ taskId, completed }) {
+    const task = await this.taskRepository.findById(taskId);
+    if (!task) throw new TaskNotFoundError(taskId);
+
+    completed ? task.complete() : task.reopen();
+    return this.taskRepository.save(task);
+  }
+}
+
+export class TaskNotFoundError extends Error {
+  constructor(taskId) {
+    super('Task not found.');
+    this.code = 'TASK_NOT_FOUND';
+    this.taskId = taskId;
+  }
+}
+```
+
+Each use case has one application responsibility. Dependencies are visible in constructors.
+
+## 5. Translate HTTP in a controller
+
+`src/interfaces/task-http-controller.js`:
+
+```js
+export class TaskHttpController {
+  constructor({ createTask, listTasks, completeTask }) {
+    this.createTask = createTask;
+    this.listTasks = listTasks;
+    this.completeTask = completeTask;
+  }
+
+  list = async (request, response, next) => {
+    try {
+      const tasks = await this.listTasks.execute();
+      response.json({ data: tasks.map((task) => task.toJSON()) });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  create = async (request, response, next) => {
+    try {
+      const task = await this.createTask.execute({ title: request.body.title });
+
+      response
+        .status(201)
+        .location(`/api/tasks/${task.id}`)
+        .json({ data: task.toJSON() });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  updateCompletion = async (request, response, next) => {
+    try {
+      const task = await this.completeTask.execute({
+        taskId: request.params.taskId,
+        completed: request.body.completed,
+      });
+
+      response.json({ data: task.toJSON() });
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+```
+
+Express request and response objects stop at this boundary.
+
+## 6. Wrap Express in an adapter
+
+`src/interfaces/express-app.js`:
+
+```js
+import express from 'express';
+import { TaskNotFoundError } from '../application/task-use-cases.js';
+import { DomainValidationError } from '../domain/task.js';
+
+export class ExpressApp {
+  constructor({ taskController, logger = console }) {
+    this.taskController = taskController;
+    this.logger = logger;
+    this.app = express();
+    this.configure();
+  }
+
+  configure() {
+    this.app.use(express.json({ limit: '100kb' }));
+
+    this.app.get('/api/health', (request, response) => {
+      response.json({ status: 'ok' });
+    });
+
+    this.app.get('/api/tasks', this.taskController.list);
+    this.app.post('/api/tasks', this.taskController.create);
+    this.app.patch('/api/tasks/:taskId', this.taskController.updateCompletion);
+
+    this.app.use((request, response) => {
+      response.status(404).json({
+        error: { code: 'ROUTE_NOT_FOUND', message: 'Route not found.' },
+      });
+    });
+
+    this.app.use(this.handleError);
+  }
+
+  handleError = (error, request, response, next) => {
+    if (error instanceof TaskNotFoundError) {
+      return response.status(404).json({
+        error: { code: error.code, message: error.message },
+      });
+    }
+
+    if (error instanceof DomainValidationError) {
+      return response.status(422).json({
+        error: { code: 'VALIDATION_FAILED', message: error.message },
+      });
+    }
+
+    this.logger.error(error);
+    return response.status(500).json({
+      error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred.' },
+    });
+  };
+
+  listen(port) {
+    return this.app.listen(port, () => {
+      this.logger.info(`API listening on http://localhost:${port}`);
+    });
+  }
+}
+```
+
+The callbacks are required by Express, but they delegate to object methods. A dedicated error middleware class is introduced in the next guide.
+
+## 7. Compose the object graph
+
+`src/composition-root.js`:
+
+```js
+import { randomUUID } from 'node:crypto';
+import { CreateTask, ListTasks, CompleteTask } from './application/task-use-cases.js';
+import { InMemoryTaskRepository } from './infrastructure/in-memory-task-repository.js';
+import { TaskHttpController } from './interfaces/task-http-controller.js';
+import { ExpressApp } from './interfaces/express-app.js';
+
+class CryptoIdGenerator {
+  next() {
+    return `task_${randomUUID()}`;
+  }
+}
+
+class SystemClock {
+  now() {
+    return new Date();
+  }
+}
+
+const taskRepository = new InMemoryTaskRepository();
+
+const taskController = new TaskHttpController({
+  createTask: new CreateTask({
+    taskRepository,
+    idGenerator: new CryptoIdGenerator(),
+    clock: new SystemClock(),
+  }),
+  listTasks: new ListTasks({ taskRepository }),
+  completeTask: new CompleteTask({ taskRepository }),
+});
+
+export const webApp = new ExpressApp({ taskController });
+```
+
+`src/server.js`:
+
+```js
+import { webApp } from './composition-root.js';
+
+const port = process.env.PORT || 3000;
+webApp.listen(port);
+```
+
+Run `npm run dev` and visit `http://localhost:3000/api/tasks`.
+
+## Current limitations
+
+The data disappears whenever the process restarts. The API has no accounts, permissions, database, central validation adapter, rate limits, or production logging. Later sections replace infrastructure classes without rewriting the entities and use cases.
+
+<Info>
+The important result is the dependency direction: Express depends on the application objects, while the application objects do not depend on Express.
+</Info>

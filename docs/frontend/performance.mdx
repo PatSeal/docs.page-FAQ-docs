@@ -1,0 +1,80 @@
+---
+title: Frontend Performance
+description: Deliver useful content quickly and keep interactions responsive.
+---
+
+Performance is the experience of waiting and interacting, not only a score. Test on ordinary mobile hardware and slower connections, not just a fast development computer.
+
+## Measure before changing
+
+Use browser developer tools and production monitoring to answer:
+
+- When does useful content appear?
+- What is the largest visible element waiting on?
+- Do clicks and typing receive quick feedback?
+- Does content move unexpectedly while loading?
+- Which assets are largest?
+- Which JavaScript tasks block the main thread?
+
+Record a baseline and change one cause at a time.
+
+## Send less data
+
+The fastest byte is one you do not send:
+
+- remove unused JavaScript and CSS;
+- choose focused dependencies;
+- split code by route or feature when it reduces initial work;
+- compress text responses;
+- paginate large data collections; and
+- avoid returning fields the page does not use.
+
+A smaller JavaScript file still needs to be downloaded, parsed, compiled, and executed. Code size and code behavior both matter.
+
+## Optimize images
+
+- Choose a suitable modern format.
+- Export dimensions near the displayed size.
+- Provide responsive sources when one file cannot fit all layouts.
+- Include `width` and `height` to reserve space.
+- Lazy-load images below the initial viewport.
+- Do not lazy-load the main above-the-fold image when it delays the primary content.
+
+```html
+<img
+  src="course-800.webp"
+  srcset="course-400.webp 400w, course-800.webp 800w, course-1200.webp 1200w"
+  sizes="(min-width: 60rem) 50vw, 100vw"
+  width="1200"
+  height="800"
+  alt="A developer reviewing a web page"
+/>
+```
+
+## Load resources intentionally
+
+Module scripts are deferred by default. Use `defer` for classic scripts that can wait until parsing is complete. Preload only a small number of truly critical resources; unnecessary preloads compete with more important downloads.
+
+Self-hosted fonts can still be expensive. Use few families and weights, subset when appropriate, and define a sensible fallback stack.
+
+## Keep the main thread responsive
+
+The browser's main thread often handles JavaScript, style calculation, layout, and painting. Long tasks delay input.
+
+- break large calculations into smaller work;
+- avoid repeated layout reads and writes in a tight loop;
+- virtualize extremely long lists;
+- debounce work that follows rapid input when appropriate; and
+- move CPU-heavy, independent work to a Web Worker when justified.
+
+## Cache safely
+
+Versioned static assets can use long cache lifetimes because a changed file gets a new name. HTML and API data usually need shorter or conditional caching. Never cache private responses in a shared cache.
+
+## Set budgets
+
+A performance budget turns “keep it fast” into a constraint. A project can set limits for initial JavaScript, image weight, total requests, or measured user experience. Run budget checks in CI, but also review real-user data because laboratory tests cannot represent every device and network.
+
+<Info>
+Performance, accessibility, and resilience overlap. A lighter page often works better on assistive technology, older devices, limited data plans, and unstable networks.
+</Info>

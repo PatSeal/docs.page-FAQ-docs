@@ -1,0 +1,218 @@
+---
+title: The DOM, Views, and Controllers
+description: Connect object-oriented JavaScript to the document and browser events.
+---
+
+The **Document Object Model (DOM)** is the browser's object representation of HTML. In an OOP frontend, view objects own DOM access and controller objects coordinate interactions.
+
+## Model one task
+
+```js
+class Task {
+  #id;
+  #title;
+  #completed;
+
+  constructor({ id, title, completed = false }) {
+    this.#id = id;
+    this.#title = title;
+    this.#completed = completed;
+  }
+
+  get id() {
+    return this.#id;
+  }
+
+  get title() {
+    return this.#title;
+  }
+
+  get completed() {
+    return this.#completed;
+  }
+
+  toggle() {
+    this.#completed = !this.#completed;
+  }
+}
+```
+
+The entity knows nothing about HTML. It only protects task state.
+
+## Let a view own rendering
+
+```js
+class TaskListView {
+  constructor({ root }) {
+    if (!root) throw new Error('TaskListView requires a root element.');
+    this.root = root;
+  }
+
+  render(tasks) {
+    const items = tasks.map((task) => this.createItem(task));
+    this.root.replaceChildren(...items);
+  }
+
+  createItem(task) {
+    const item = document.createElement('li');
+    item.dataset.taskId = task.id;
+
+    const title = document.createElement('span');
+    title.textContent = task.title;
+
+    const toggleButton = document.createElement('button');
+    toggleButton.type = 'button';
+    toggleButton.dataset.action = 'toggle';
+    toggleButton.textContent = task.completed ? 'Reopen' : 'Complete';
+
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.dataset.action = 'remove';
+    removeButton.textContent = 'Remove';
+
+    item.append(title, toggleButton, removeButton);
+    return item;
+  }
+
+  onAction(handler) {
+    this.root.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-action]');
+      const item = button?.closest('[data-task-id]');
+      if (!button || !item) return;
+
+      handler({ action: button.dataset.action, taskId: item.dataset.taskId });
+    });
+  }
+}
+```
+
+The array callback and DOM listener are private implementation details of the view. `textContent` keeps task titles as text instead of interpreting them as HTML.
+
+## Let a form view own form details
+
+```js
+class TaskFormView {
+  constructor({ form }) {
+    this.form = form;
+    this.titleInput = form.elements.namedItem('title');
+  }
+
+  onSubmit(handler) {
+    this.form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      handler({ title: this.titleInput.value.trim() });
+    });
+  }
+
+  reset() {
+    this.form.reset();
+    this.titleInput.focus();
+  }
+
+  showError(message) {
+    this.form.querySelector('[data-form-error]').textContent = message;
+  }
+}
+```
+
+The controller does not need to query inputs or know which DOM node displays an error.
+
+## Store tasks behind a collection object
+
+```js
+class TaskCollection {
+  #tasks = new Map();
+
+  add(task) {
+    this.#tasks.set(task.id, task);
+  }
+
+  find(taskId) {
+    return this.#tasks.get(taskId) ?? null;
+  }
+
+  remove(taskId) {
+    this.#tasks.delete(taskId);
+  }
+
+  all() {
+    return [...this.#tasks.values()];
+  }
+}
+```
+
+The internal map cannot be edited directly by the UI.
+
+## Coordinate through a controller
+
+```js
+class TaskListController {
+  constructor({ collection, listView, formView, idGenerator }) {
+    this.collection = collection;
+    this.listView = listView;
+    this.formView = formView;
+    this.idGenerator = idGenerator;
+  }
+
+  start() {
+    this.formView.onSubmit(this.handleSubmit);
+    this.listView.onAction(this.handleAction);
+    this.render();
+  }
+
+  handleSubmit = ({ title }) => {
+    if (title.length < 2) {
+      this.formView.showError('Enter at least two characters.');
+      return;
+    }
+
+    this.collection.add(new Task({ id: this.idGenerator.next(), title }));
+    this.formView.reset();
+    this.render();
+  };
+
+  handleAction = ({ action, taskId }) => {
+    const task = this.collection.find(taskId);
+    if (!task) return;
+
+    if (action === 'toggle') task.toggle();
+    if (action === 'remove') this.collection.remove(taskId);
+    this.render();
+  };
+
+  render() {
+    this.listView.render(this.collection.all());
+  }
+}
+```
+
+The controller coordinates objects. It does not build HTML, generate IDs, or expose collection storage.
+
+## Assemble objects in the composition root
+
+```js
+const taskListController = new TaskListController({
+  collection: new TaskCollection(),
+  listView: new TaskListView({ root: document.querySelector('#task-list') }),
+  formView: new TaskFormView({ form: document.querySelector('#task-form') }),
+  idGenerator: new CryptoIdGenerator(),
+});
+
+taskListController.start();
+```
+
+Only the composition root selects concrete objects and queries the page for their root elements.
+
+## Event delegation is still OOP
+
+The browser requires callback functions. A view can accept a controller method as its handler, and the controller can use arrow-method fields to preserve `this`. The callback is a connection point; the behavior remains owned by objects.
+
+## Keep boundaries clean
+
+- Entities must not access the DOM.
+- Views must not implement business rules or call the database.
+- Controllers must not construct concrete services internally.
+- API clients must not render HTML.
+- The composition root owns concrete construction.
+
+This separation makes the DOM replaceable in tests and allows the same `Task` entity to be used by another interface.

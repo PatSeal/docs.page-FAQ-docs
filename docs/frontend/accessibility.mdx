@@ -1,0 +1,99 @@
+---
+title: Accessibility
+description: Make interfaces understandable and operable for more people.
+---
+
+Web accessibility means people can perceive, understand, navigate, and operate an interface across different abilities and situations. It is a quality requirement, not a finishing step.
+
+## Begin with semantic HTML
+
+Native elements provide meaning and behavior:
+
+- buttons work with a keyboard;
+- labels name form controls;
+- headings create a navigable outline;
+- landmarks such as `nav` and `main` identify regions; and
+- lists communicate relationships between items.
+
+Use ARIA only when HTML cannot express the needed semantics. ARIA changes what assistive technology understands; it does not automatically add keyboard behavior or visual styling.
+
+## Make keyboard operation complete
+
+Use Tab and Shift+Tab to move through interactive controls. Make sure:
+
+- focus order follows the visual and reading order;
+- every action works without a mouse;
+- focus is always visible;
+- no component traps focus unexpectedly; and
+- a skip link lets keyboard users bypass repeated navigation.
+
+```html
+<a class="skip-link" href="#main-content">Skip to main content</a>
+<main id="main-content">...</main>
+```
+
+```css
+.skip-link {
+  position: absolute;
+  transform: translateY(-150%);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+```
+
+## Use clear names and instructions
+
+Buttons and links should make sense out of context. Prefer “Delete task ‘Learn CSS’” over three identical buttons named only “Delete.” Visible text can stay short while an accessible name adds context:
+
+```html
+<button type="button" aria-label="Delete task Learn CSS">Delete</button>
+```
+
+Do not use color alone to communicate a result. Pair it with text, an icon that has a name, or another clear cue.
+
+## Make forms forgiving
+
+- Keep labels visible.
+- Put instructions before the control when possible.
+- Identify the field with an error.
+- Explain how to fix it.
+- Preserve valid data after submission fails.
+- Move focus or provide a summary when errors would otherwise be missed.
+
+```html
+<label for="email">Email</label>
+<input id="email" aria-invalid="true" aria-describedby="email-error" />
+<p id="email-error">Enter an address such as name@example.com.</p>
+```
+
+## Manage focus in dynamic interfaces
+
+When a dialog opens, move focus into it, keep keyboard focus within it while open, close it with Escape, and return focus to the control that opened it. Prefer the native `dialog` element or a well-tested accessible component instead of building complex focus behavior casually.
+
+After route-like navigation in a single-page application, update the document title and place focus at an appropriate page heading or content container.
+
+## Support visual access
+
+- Maintain sufficient contrast for text and important controls.
+- Allow text to resize without clipping or overlap.
+- Provide visible hover and focus states.
+- Avoid rapid flashing.
+- Respect reduced-motion preferences.
+- Include text alternatives for meaningful images and captions or transcripts for time-based media.
+
+## Test in layers
+
+1. Use semantic HTML and linting during development.
+2. Navigate the full flow with a keyboard.
+3. Test zoom, large text, high contrast, and reduced motion.
+4. Run automated accessibility checks.
+5. Use a screen reader for representative flows.
+6. Include disabled people in usability testing when the project allows.
+
+Automated tools find only some problems. A passing scan does not prove that the experience is understandable or usable.
+
+<Info>
+Accessibility often improves the interface for everyone: clear labels, visible focus, large targets, captions, and helpful errors also assist people using mobile devices, slow networks, or temporary injuries.
+</Info>

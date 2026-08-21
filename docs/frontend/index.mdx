@@ -1,0 +1,73 @@
+---
+title: Frontend Development
+description: Organize browser code into a maintainable, accessible application.
+---
+
+The frontend is the part of an application that runs in the browser. It presents information, accepts input, manages temporary interface state, and communicates with backend services.
+
+A frontend framework can help organize a large interface, but the important decisions are framework-independent.
+
+## Frontend responsibilities
+
+A well-structured object-oriented frontend usually handles:
+
+- page and component rendering;
+- navigation between views;
+- local and shared state;
+- form input and client-side feedback;
+- API requests and their loading, success, empty, and error states;
+- accessibility and responsive behavior; and
+- performance in the user's device and network conditions.
+
+It should not be the only place that enforces security or important business rules. Browser code is delivered to the user and can be inspected or changed. Frontend entities improve consistency, while the server remains the trusted authority.
+
+## A useful source structure
+
+```text
+src/
+  domain/
+    task.js
+    task-title.js
+  application/
+    task-collection.js
+  infrastructure/
+    task-api-client.js
+  ui/
+    task-form-view.js
+    task-list-view.js
+    task-page-controller.js
+  composition-root.js
+```
+
+Organize by feature when the application grows, but preserve the direction of dependencies: UI and infrastructure depend on application contracts and domain objects, not the reverse.
+
+## The rendering cycle
+
+Most frontend architectures follow the same cycle:
+
+1. Entities and collection objects describe the current application state.
+2. A view object renders that state.
+3. A person or system event occurs.
+4. The view delegates the event to a controller.
+5. The controller asks an entity, use case, or API client to perform the action.
+6. The view renders the resulting state.
+
+Frameworks differ in syntax, but the object boundaries transfer between them. Framework components may act as view adapters while domain entities and application services remain ordinary classes.
+
+## Learn this section
+
+- [Tooling and modules](/frontend/tooling)
+- [Components and state](/frontend/components-and-state)
+- [Forms and API data](/frontend/forms-and-data)
+- [Accessibility](/frontend/accessibility)
+- [Performance](/frontend/performance)
+
+## Framework or no framework?
+
+Use class-based view and controller objects with plain browser APIs for small pages, progressive enhancement, or focused widgets. Consider a framework when the interface has many interactive views, shared state, reusable components, or a team that benefits from established conventions.
+
+Do not choose a framework only because it is popular. Consider project requirements, team skill, ecosystem stability, accessibility quality, performance cost, and deployment environment.
+
+<Info>
+Build one meaningful project with the browser platform before learning a framework. You will understand what the framework is doing for you and debug it more confidently.
+</Info>

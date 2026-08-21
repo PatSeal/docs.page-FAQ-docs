@@ -1,0 +1,118 @@
+---
+title: Application Architecture
+description: Choose clear boundaries, contracts, and deployment shapes for a web application.
+---
+
+Architecture is the set of decisions that makes change safe. In this handbook, OOP supplies the internal boundaries: cohesive objects, application-owned contracts, constructor injection, and composition roots.
+
+## A practical starting shape
+
+For many applications, start with:
+
+```text
+Browser
+  View → Controller → API client
+  │ HTTPS
+  ▼
+Web application / API
+  HTTP controller → Use case → Entity → Repository contract
+  │ Repository implementation + parameterized SQL
+  ▼
+Relational database
+```
+
+The frontend can be served by the same web application or a static host. The API runs as one deployable service with internal object-oriented modules for interfaces, use cases, domain objects, and infrastructure. This is a **modular monolith**: one deployment, clear code boundaries.
+
+It is usually easier to develop, test, and operate than many small services. Split a service only when an independent deployment, scaling profile, reliability boundary, security boundary, or team ownership model provides a clear benefit.
+
+## Follow the dependency rule
+
+Dependencies point toward application policy:
+
+```text
+Frameworks and drivers → adapters → use cases → domain entities
+```
+
+- Domain entities import no outer layer.
+- Use cases depend on application-owned contracts.
+- Controllers and repositories adapt external technologies.
+- The composition root knows concrete classes and injects them.
+
+This rule is more important than the exact folder names.
+
+## Define contracts
+
+Document the API's:
+
+- route, method, and purpose;
+- authentication and permission requirement;
+- path, query, and body schema;
+- response schema and status codes;
+- pagination and sorting rules;
+- error codes; and
+- compatibility policy.
+
+Generate types or API client classes from a machine-readable contract when it improves consistency, but keep runtime validator objects because compile-time types do not validate network input.
+
+Internal object contracts matter too. Document each repository or service method's input, output, error behavior, and side effects so alternative implementations remain polymorphic.
+
+## Same origin and separate origin
+
+If frontend and API share one origin, requests are simpler and cookie sessions work naturally:
+
+```text
+https://app.example.com/
+https://app.example.com/api/tasks
+```
+
+If they use different origins, configure cross-origin resource sharing (CORS) narrowly on the API:
+
+```text
+https://app.example.com
+https://api.example.com
+```
+
+CORS tells browsers which other origins may read responses. It is not authentication and does not stop non-browser clients from sending requests.
+
+## Configuration and secrets
+
+Keep environment-specific values outside source code:
+
+```text
+PORT=3000
+DATABASE_URL=...
+SESSION_SECRET=...
+LOG_LEVEL=info
+PUBLIC_APP_ORIGIN=https://app.example.com
+```
+
+Create a `Configuration` value object at startup. It validates required fields and passes only the settings each adapter needs. Store secrets in the deployment platform's secret system, rotate them, and restrict which workloads and people can read them.
+
+## Background work
+
+An HTTP request should finish quickly. Move long or retryable tasks—email delivery, video processing, report generation—to a durable queue and worker.
+
+The request can ask a `JobQueue` abstraction to enqueue a job and return `202 Accepted`. A worker controller loads the message and delegates to a use-case object. The queue adapter owns acknowledgement and limited retries. Make use cases idempotent so delivery more than once does not cause duplicate effects.
+
+## File uploads
+
+For large uploads, a `CreateUpload` use case can ask an injected `ObjectStorage` adapter for a short-lived signed URL. Validator, authorization policy, scanner, and storage objects keep separate responsibilities. Use an injected ID generator for storage keys rather than trusting a client file name.
+
+## Cache at the right layer
+
+- Browser and CDN caching is ideal for versioned static assets.
+- HTTP conditional requests can reduce repeated data transfer.
+- A caching decorator around a repository or reader can protect an expensive read.
+- Database caches and indexes improve query work.
+
+Every cache adapter needs an invalidation and privacy strategy. Never let a shared cache serve one user's private response to another. A decorator must honor the same behavioral contract as the object it wraps.
+
+## Plan failure boundaries
+
+Define timeouts inside every external-service adapter and inject retry policies only for safe operations. Apply backpressure or rate limits before overload spreads. Use health-check objects carefully:
+
+- a **liveness** check answers whether the process should be restarted;
+- a **readiness** check answers whether it can receive traffic; and
+- a dependency check should not make every instance restart during a database outage.
+
+Inject logger, metrics, and trace collaborators at interface and infrastructure boundaries. Domain entities should not emit framework-specific telemetry directly; use cases can return domain events to an event publisher abstraction when the application needs them.

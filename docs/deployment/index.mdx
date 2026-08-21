@@ -1,0 +1,55 @@
+---
+title: Deploy and Operate
+description: Release a web application safely and keep it healthy in production.
+---
+
+Deployment moves an application from a development environment to a place users can reach. Operations keeps it reliable, secure, observable, and recoverable after that release.
+
+## Production parts
+
+A typical deployment includes:
+
+- a domain and DNS records;
+- HTTPS certificates;
+- static frontend assets or a frontend server;
+- one or more backend application instances;
+- a managed database;
+- configuration and secret storage;
+- logs, metrics, traces, and alerts;
+- backups and restoration procedures; and
+- an automated delivery pipeline.
+
+Managed platforms can provide many of these parts. You still own application behavior, configuration, access, data, cost, and recovery decisions.
+
+## Environments
+
+Common environments are:
+
+- **development** for fast local iteration;
+- **test or CI** for automated checks;
+- **staging** for production-like verification; and
+- **production** for real users and data.
+
+Use the same build artifact through later environments when possible. Change configuration rather than rebuilding different code for each environment.
+
+## A release flow
+
+1. A reviewed change is merged.
+2. CI repeats required checks.
+3. One immutable artifact is built and scanned.
+4. The artifact is deployed to a production-like environment.
+5. Smoke tests confirm critical paths.
+6. Database migrations run through a controlled process.
+7. Production receives the release gradually or all at once, based on risk.
+8. Health and business signals are observed.
+9. The team completes the rollout or rolls back.
+
+## Learn this section
+
+- [Prepare for production](/deployment/production)
+- [Continuous integration and delivery](/deployment/ci-cd)
+- [Monitoring and maintenance](/deployment/monitoring)
+
+<Info>
+Production is a different operating environment, not a different code quality standard. Security, tests, logs, and recovery plans should be designed while the feature is built.
+</Info>

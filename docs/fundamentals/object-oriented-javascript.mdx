@@ -1,0 +1,282 @@
+---
+title: Object-Oriented JavaScript
+description: Model application behavior with encapsulated objects, composition, contracts, and polymorphism.
+---
+
+Object-oriented programming (OOP) organizes software around objects that combine state with the behavior allowed to change that state. Good OOP is not “put every function in a class.” It is the work of giving each object one clear responsibility and a small public contract.
+
+This handbook uses OOP for application JavaScript in the browser and server. HTML, CSS, HTTP, and SQL keep their native paradigms; objects coordinate them through adapters.
+
+## Class and object
+
+A **class** defines the shape and behavior of a kind of object. An **object** is one instance of that class:
+
+```js
+class Task {
+  #id;
+  #title;
+  #completed;
+
+  constructor({ id, title, completed = false }) {
+    this.#id = id;
+    this.#title = title;
+    this.#completed = completed;
+  }
+
+  get id() {
+    return this.#id;
+  }
+
+  get title() {
+    return this.#title;
+  }
+
+  get completed() {
+    return this.#completed;
+  }
+
+  complete() {
+    this.#completed = true;
+  }
+}
+
+const task = new Task({ id: 'task_1', title: 'Learn OOP' });
+task.complete();
+```
+
+This object already protects its fields. The next version adds validated value objects so construction and later changes also preserve domain rules.
+
+## Encapsulation protects invariants
+
+An **invariant** is a rule that must always remain true. A task needs a valid title and controls its own completion state:
+
+```js
+class TaskTitle {
+  #value;
+
+  constructor(value) {
+    const normalized = String(value).trim();
+
+    if (normalized.length < 2 || normalized.length > 120) {
+      throw new Error('Task title must contain 2 to 120 characters.');
+    }
+
+    this.#value = normalized;
+  }
+
+  toString() {
+    return this.#value;
+  }
+}
+
+class Task {
+  #id;
+  #ownerId;
+  #title;
+  #completed;
+  #createdAt;
+
+  constructor({ id, ownerId, title, completed = false, createdAt = new Date() }) {
+    if (!id) throw new Error('Task ID is required.');
+
+    this.#id = id;
+    this.#ownerId = ownerId;
+    this.#title = title instanceof TaskTitle ? title : new TaskTitle(title);
+    this.#completed = Boolean(completed);
+    this.#createdAt = createdAt;
+  }
+
+  get id() {
+    return this.#id;
+  }
+
+  get ownerId() {
+    return this.#ownerId;
+  }
+
+  get title() {
+    return this.#title;
+  }
+
+  get completed() {
+    return this.#completed;
+  }
+
+  get createdAt() {
+    return new Date(this.#createdAt);
+  }
+
+  complete() {
+    this.#completed = true;
+  }
+
+  reopen() {
+    this.#completed = false;
+  }
+
+  rename(title) {
+    this.#title = new TaskTitle(title);
+  }
+
+  toJSON() {
+    return {
+      id: this.id,
+      ownerId: this.ownerId,
+      title: this.title.toString(),
+      completed: this.completed,
+      createdAt: this.createdAt.toISOString(),
+    };
+  }
+}
+```
+
+Private fields prevent outside code from bypassing the object's methods. `TaskTitle` is a **value object**: equality and meaning come from its value rather than a separate identity.
+
+## Abstraction exposes what callers need
+
+A useful abstraction hides implementation detail behind a small contract. The application needs to save and retrieve tasks; it does not need to know whether they live in memory or PostgreSQL.
+
+```js
+class TaskRepository {
+  async findByOwner() {
+    throw new Error('TaskRepository.findByOwner must be implemented.');
+  }
+
+  async findOwnedById() {
+    throw new Error('TaskRepository.findOwnedById must be implemented.');
+  }
+
+  async save() {
+    throw new Error('TaskRepository.save must be implemented.');
+  }
+
+  async remove() {
+    throw new Error('TaskRepository.remove must be implemented.');
+  }
+}
+```
+
+This abstract base class documents the methods required by the application. A TypeScript project can express the same boundary with an `interface`.
+
+## Polymorphism makes implementations replaceable
+
+Two repository objects can honor the same contract:
+
+```js
+class InMemoryTaskRepository extends TaskRepository {
+  #tasks = new Map();
+
+  async findByOwner(ownerId) {
+    return [...this.#tasks.values()].filter((task) => task.ownerId === ownerId);
+  }
+
+  async findOwnedById(taskId, ownerId) {
+    const task = this.#tasks.get(taskId);
+    return task?.ownerId === ownerId ? task : null;
+  }
+
+  async save(task) {
+    this.#tasks.set(task.id, task);
+    return task;
+  }
+
+  async remove(taskId) {
+    this.#tasks.delete(taskId);
+  }
+}
+```
+
+A later `PostgresTaskRepository` can replace it without changing the service that uses it. That substitutability is polymorphism.
+
+Inheritance is justified here because every implementation truly **is a** `TaskRepository`. Do not use inheritance only to reuse a few lines of code.
+
+## Composition builds behavior from collaborators
+
+Composition means an object receives other objects that perform focused jobs:
+
+```js
+class CreateTask {
+  constructor({ taskRepository, idGenerator, clock }) {
+    this.taskRepository = taskRepository;
+    this.idGenerator = idGenerator;
+    this.clock = clock;
+  }
+
+  async execute({ ownerId, title }) {
+    const task = new Task({
+      id: this.idGenerator.next(),
+      ownerId,
+      title: new TaskTitle(title),
+      createdAt: this.clock.now(),
+    });
+
+    return this.taskRepository.save(task);
+  }
+}
+```
+
+`CreateTask` does not inherit from a repository, clock, or ID generator. It **has** those collaborators. Composition keeps each responsibility replaceable and prevents deep inheritance trees.
+
+## Dependency injection keeps creation outside
+
+The class declares dependencies through its constructor. A **composition root** creates concrete objects and connects them:
+
+```js
+const taskRepository = new InMemoryTaskRepository();
+const idGenerator = new CryptoIdGenerator();
+const clock = new SystemClock();
+
+const createTask = new CreateTask({
+  taskRepository,
+  idGenerator,
+  clock,
+});
+```
+
+This is manual dependency injection. A container can automate wiring in very large systems, but the design principle is the same: business objects do not construct infrastructure objects internally.
+
+## The four OOP ideas
+
+| Idea | Meaning in this handbook |
+| --- | --- |
+| Encapsulation | State and invariants are protected behind public methods |
+| Abstraction | Callers depend on a small contract, not implementation details |
+| Inheritance | A subtype extends a genuinely substitutable base contract |
+| Polymorphism | Different objects can fulfill the same contract |
+
+Composition is not one of the traditional four, but it is the default tool for assembling behavior safely.
+
+## SOLID in plain language
+
+- **Single Responsibility:** one class has one main reason to change.
+- **Open/Closed:** add a new implementation without rewriting stable callers.
+- **Liskov Substitution:** every subtype honors the promises of its base type.
+- **Interface Segregation:** depend on small focused contracts.
+- **Dependency Inversion:** business rules depend on abstractions; infrastructure plugs into them.
+
+See [OOP and SOLID design](/full-stack/oop-solid-design) for the full application architecture.
+
+## Avoid common OOP mistakes
+
+- Do not create a “god object” that handles UI, validation, network, and storage.
+- Do not make every field public and call the result encapsulation.
+- Do not add getters and setters that allow any invalid state.
+- Do not use static global state as a hidden dependency.
+- Do not inherit for convenience when composition expresses the relationship better.
+- Do not create empty classes that only rename a single library call.
+- Do not make an object know more collaborators than its responsibility needs.
+
+## Readiness check
+
+You are ready to apply OOP across the stack when you can:
+
+- identify an entity and one of its invariants;
+- move a state change behind an entity method;
+- define a repository contract without database details;
+- inject a fake repository into a use case;
+- explain why composition is safer than unrelated inheritance; and
+- replace one adapter without changing the business rule that uses it.
+
+<Info>
+Classes are a language feature; OOP is a design discipline. A codebase can contain many classes and still have poor object boundaries.
+</Info>

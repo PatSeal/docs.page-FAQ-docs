@@ -1,49 +1,80 @@
-# Avodah FAQ — docs.page prototype
+# Web Development Handbook
 
-This is a docs.page-based version of the same FAQ/help center content, built to compare against the Nuxt.js prototype delivered earlier.
+A practical, beginner-friendly web development guide built for [docs.page](https://docs.page).
 
-## How to get this live
+The handbook starts with how browsers and servers communicate, then moves through HTML, CSS, JavaScript, object-oriented frontend architecture, backend APIs, databases, testing, security, deployment, and production maintenance. Application examples use encapsulated classes, composition, dependency injection, repository contracts, polymorphism, and the SOLID principles. Node.js, Express, and SQL provide a concrete full-stack stack.
 
-docs.page has no build step — it renders directly from a public GitHub repo. To publish:
+## Read the documentation
 
-1. Add these files (`docs.json` and the whole `docs/` folder) to the root of **https://github.com/PatSeal/docs.page-FAQ-docs**. Easiest way if you're not comfortable with git commands: open that repo on github.com, click **Add file → Upload files**, and drag the extracted `docs.json` file and the `docs` folder in together (modern browsers keep the folder structure intact when you drag a whole folder).
-2. Commit the upload (the button at the bottom of that upload page).
-3. Visit **https://docs.page/PatSeal/docs.page-FAQ-docs** — it should be live within moments, no deploy step needed.
+After the changes are pushed to GitHub, the published handbook is available at:
 
-If you'd rather use git directly:
+<https://docs.page/PatSeal/docs.page-FAQ-docs>
+
+docs.page reads `docs.json` and the MDX files under `docs/` directly from the repository. There is no local build step.
+
+## Repository structure
+
+```text
+docs.json                 Site title, theme, and sidebar navigation
+docs/
+  index.mdx                       Main integration and implementation hub
+  getting-started/
+    index.mdx                     Section landing page
+    *.mdx                         Web overview and first project pages
+  fundamentals/
+    index.mdx                     Section landing page
+    *.mdx                         HTML, CSS, JavaScript, OOP, and DOM pages
+  frontend/
+    index.mdx                     Section landing page
+    *.mdx                         Views, controllers, forms, accessibility, performance
+  backend/
+    index.mdx                     Section landing page
+    *.mdx                         Use cases, APIs, validation, and authentication
+  data/
+    index.mdx                     Section landing page
+    *.mdx                         Databases, repositories, SQL, and safe queries
+  full-stack/
+    index.mdx                     Section landing page
+    *.mdx                         SOLID architecture, tutorial, tests, and security
+  deployment/
+    index.mdx                     Section landing page
+    *.mdx                         Production, CI/CD, and monitoring
+  reference/
+    index.mdx                     Section landing page
+    *.mdx                         Git, roadmap, OOP checklist, glossary, and FAQ
 ```
-git clone https://github.com/PatSeal/docs.page-FAQ-docs.git
-# copy docs.json and the docs/ folder into that cloned folder
-cd docs.page-FAQ-docs
-git add .
-git commit -m "Add Avodah FAQ content"
-git push
-```
 
-## What's different from the Nuxt.js prototype
+## Folder convention
 
-**The admin edit panel has been dropped for this version — by design, not as an oversight.** docs.page is a hosted renderer with no server of its own to run custom code against; it only understands a `docs.json` config plus Markdown/MDX files pulled live from GitHub. There's no way to bolt on a custom in-browser editor the way the Nuxt prototype has one, so per your instruction, that feature is cancelled here rather than forced. Editing content on this platform means editing the Markdown files directly (in GitHub's own web editor, or locally) and pushing — which is actually the same "docs-as-code" foundation the AI-agent maintenance workflow (recommendation doc, Section 4) was built around, so that part still works unchanged.
+- `docs/index.mdx` is the only page stored directly under `docs/`. It connects the sections and explains the complete implementation flow.
+- Every section is a folder.
+- Every section folder contains an `index.mdx` landing page.
+- Every topic page belongs inside its section folder.
+- `docs.json` mirrors the same folder structure in the sidebar.
+- Internal links use the folder route: `docs/frontend/index.mdx` becomes `/frontend`, and `docs/frontend/forms-and-data.mdx` becomes `/frontend/forms-and-data`.
 
-Also different:
-- **No custom visual design** — docs.page has its own fixed theme (you can set a primary color and logo, which `docs.json` here does with a blue accent, but you don't get the fully custom nuxt.com-style layout the Nuxt prototype has).
-- **The repo must stay public** for the hosted docs.page service to render it. If any content here ever needs to be private, this isn't the right platform for it.
-- **Versioning** works via git branches (docs.page serves branch/tag previews at distinct URLs) rather than folders.
-- Once live, a custom domain (`docs.avodahapp.com`) is possible via a CNAME record plus a pull request to docs.page's own repo — that's a separate step once this is live and you're happy with it.
+## Edit the handbook
 
-## Content
+1. Choose the section folder that owns the topic.
+2. Edit its `index.mdx` or add the topic as another `.mdx` file inside that folder.
+3. Update the section landing page when the new topic changes the recommended reading order.
+4. Add or rename the matching entry in `docs.json`.
+5. Link from the main `docs/index.mdx` only when the topic changes the end-to-end implementation path.
+6. Use a root-relative internal link such as `/fundamentals/html`.
+7. Preview a pushed branch at `https://docs.page/PatSeal/docs.page-FAQ-docs~branch-name`, or run `npx @docs.page/cli preview` locally.
+8. Check the page on both a wide screen and a phone-sized screen before merging.
 
-Same information architecture as the Nuxt prototype: Getting Started, Using Avodah, Groups, Events, Giving, FAQ — same placeholder text, same caveat that it was drafted from a low-resolution site-map image and needs checking against the real app before this goes anywhere public.
+## Content principles
 
-## AI-agent maintenance workflow (included)
+- Explain the idea before introducing syntax.
+- Use short examples that demonstrate one concept at a time.
+- Define unfamiliar terms when they first appear.
+- Prefer standards and transferable concepts over framework-specific tricks.
+- Keep application behavior behind cohesive object interfaces and inject dependencies.
+- Prefer composition over inheritance unless the subtype is genuinely substitutable.
+- Make every class responsible for one reason to change.
+- Never place passwords, API keys, or other secrets in examples or commits.
 
-This package now includes `.github/workflows/ai-docs-update.yml`, which wires up the maintenance-automation approach from the recommendation doc (Section 4) specifically for this docs.page repo. Once it's uploaded to GitHub along with everything else, here's how it works and what you still need to do to turn it on.
+## License
 
-**What it does:** anyone can open a GitHub Issue describing a documentation change (e.g. "the Giving page needs to mention recurring gifts can now be paused") and either label it `ai-docs` or mention `@claude` in the text, or comment `@claude <instruction>` on an existing issue/PR. Claude reads the instruction, edits the relevant `.mdx` files under `docs/` (and `docs.json`'s sidebar if a page is added), and opens a pull request. It's told explicitly never to touch `.github/` or merge anything itself — a human always reviews and merges the PR. You can also trigger it manually from the Actions tab (`workflow_dispatch`) without needing an issue at all.
-
-**One-time setup you need to do on github.com (I don't have push access to your repo, so this part can't be done for you):**
-1. Upload this whole package (`docs.json`, `docs/`, and now `.github/`) to **https://github.com/PatSeal/docs.page-FAQ-docs** the same way as before — drag-and-drop via **Add file → Upload files** keeps the `.github/workflows/` folder structure intact, or use `git add . && git commit && git push` if you're working from a clone.
-2. Get an Anthropic API key (from the Claude Console, if you don't already have one for the org).
-3. In the repo, go to **Settings → Secrets and variables → Actions → New repository secret**, name it `ANTHROPIC_API_KEY`, and paste the key in as the value.
-4. That's it — the workflow is now live. Test it by opening an issue with `@claude` in the body.
-
-**Note on scope:** the action has no built-in mechanism to hard-restrict which files it can touch — the "only edit `docs/` and `docs.json`" boundary is enforced by instructing Claude in the workflow's prompt, not by file permissions. Treat every PR it opens as a draft to review, the same as you would a human contributor's — that's the whole point of the PR-based workflow rather than auto-merge.
+No license file is currently included. Add one before redistributing the content outside this repository.

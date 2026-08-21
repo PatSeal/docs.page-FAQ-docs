@@ -1,0 +1,94 @@
+---
+title: How the Web Works
+description: Follow a request from a typed URL to a rendered page.
+---
+
+The web is a system of computers exchanging messages. Your browser is a **client**: it asks for a resource. A **server** receives that request and sends a response.
+
+## What happens when you visit a site
+
+Imagine entering `https://example.com/products` in a browser:
+
+1. The browser reads the URL.
+2. DNS finds the server's network address for `example.com`.
+3. The browser opens a secure connection using HTTPS.
+4. It sends an HTTP request for `/products`.
+5. The server returns an HTTP response, often containing HTML.
+6. The browser parses the HTML and requests linked CSS, JavaScript, images, and fonts.
+7. It combines those resources and draws the page.
+8. JavaScript can make later requests without reloading the whole page.
+
+## Read a URL
+
+Consider this URL:
+
+```text
+https://shop.example.com:443/products?category=books#reviews
+```
+
+| Part | Meaning |
+| --- | --- |
+| `https` | Protocol: the rules used to communicate securely |
+| `shop.example.com` | Hostname: the server's human-readable name |
+| `443` | Port: the network entry point; normally hidden for HTTPS |
+| `/products` | Path: the requested resource or route |
+| `?category=books` | Query string: optional request values |
+| `#reviews` | Fragment: a location inside the returned page; not sent to the server |
+
+## HTTP requests and responses
+
+A request contains a method, path, headers, and sometimes a body:
+
+```http
+POST /api/tasks HTTP/1.1
+Content-Type: application/json
+
+{"title":"Learn HTTP"}
+```
+
+The response contains a status code, headers, and usually a body:
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/json
+
+{"id":42,"title":"Learn HTTP","completed":false}
+```
+
+Common request methods are:
+
+- `GET` reads data;
+- `POST` creates data;
+- `PUT` or `PATCH` updates data; and
+- `DELETE` removes data.
+
+Common status code groups are:
+
+- `2xx`: the request succeeded;
+- `3xx`: the client must follow a redirect or use a cached result;
+- `4xx`: the request has a client-side problem; and
+- `5xx`: the server failed while handling a valid request.
+
+## Static and dynamic sites
+
+A **static site** sends prepared files. It is a good fit for documentation, portfolios, and marketing pages.
+
+A **dynamic application** creates responses using code and data. A dashboard might ask a database for the signed-in user's projects before returning a response.
+
+Many modern sites combine both approaches: static pages for speed and dynamic APIs for personalized data.
+
+## Browser developer tools
+
+Open developer tools in your browser and find the **Network** panel. Reload a page and inspect:
+
+- the document request;
+- its method and status code;
+- response headers;
+- transferred file size; and
+- the requests for CSS, JavaScript, and images.
+
+This panel is one of the best ways to understand and debug the client-server boundary.
+
+<Info>
+The internet is the global network. The web is one service built on that network, using URLs, HTTP, browsers, and web servers.
+</Info>

@@ -1,0 +1,98 @@
+---
+title: Database Concepts
+description: Understand relational and document models, keys, constraints, indexes, and transactions.
+---
+
+A database management system stores data and provides ways to query, change, protect, and recover it. Different database models make different tradeoffs.
+
+## Relational databases
+
+A relational database stores data in tables with rows and columns. A schema defines types, constraints, and relationships. SQL is used to query it.
+
+Good fits include:
+
+- records with important relationships;
+- transactions that update several records safely;
+- reporting and flexible queries; and
+- data that benefits from strong constraints.
+
+Examples include PostgreSQL, MySQL, and SQLite.
+
+## Document databases
+
+A document database stores self-contained documents, often shaped like JSON. Related values may be embedded in the same document or linked by identifiers.
+
+Good fits can include:
+
+- naturally document-shaped records;
+- data with fields that vary meaningfully between documents; and
+- access patterns that usually read or write a whole aggregate together.
+
+Using documents does not remove the need for schema design. The application still depends on field meaning, validation, indexes, and migrations.
+
+## Keys and relationships
+
+A **primary key** uniquely identifies a row. A **foreign key** refers to a row in another table.
+
+```text
+users
+  id (primary key)
+
+tasks
+  id (primary key)
+  owner_id (foreign key → users.id)
+```
+
+Common relationship types are:
+
+- one-to-one;
+- one-to-many, such as one user owning many tasks; and
+- many-to-many, such as users belonging to many teams, represented through a join table.
+
+## Constraints protect truth
+
+Database constraints reject invalid states even if application code has a bug:
+
+- `NOT NULL` requires a value;
+- `UNIQUE` prevents duplicates;
+- `CHECK` enforces a condition; and
+- `FOREIGN KEY` protects a relationship.
+
+Use application validation for friendly feedback and database constraints for final integrity.
+
+## Indexes trade storage for faster lookup
+
+An index helps the database find and order rows without scanning the whole table. It also consumes storage and adds work to writes.
+
+Create indexes for real query patterns, such as:
+
+```text
+List one user's tasks ordered by newest first.
+Find an account by normalized email.
+Find incomplete tasks due before a date.
+```
+
+Column order matters in a multi-column index. Use query plans and measured workload instead of indexing every field.
+
+## Transactions make work atomic
+
+A transaction groups changes so they commit together or roll back together. A transfer between two balances must not subtract from one without adding to the other.
+
+Transactions provide important guarantees, commonly summarized as ACID:
+
+- **Atomicity**: all changes happen or none do.
+- **Consistency**: constraints remain satisfied.
+- **Isolation**: concurrent work does not see unsafe partial states.
+- **Durability**: committed data survives expected failures.
+
+Choose an isolation level based on the anomalies the operation must prevent. Stronger isolation can require more coordination.
+
+## Normalize with purpose
+
+Normalization separates facts to reduce duplication and update mistakes. For example, store a user's email once in `users`, not inside every task.
+
+Denormalization intentionally duplicates selected data to simplify or speed a known read. Treat it as a derived value with a plan for keeping it correct.
+
+<Info>
+Choose a database from access patterns, consistency requirements, scale, team experience, and operational support—not from a claim that one model is always more modern.
+</Info>

@@ -1,0 +1,165 @@
+---
+title: Testing and Debugging
+description: Build confidence with focused tests and a systematic debugging process.
+---
+
+Testing checks expected behavior before users find a failure. Debugging explains an observed failure. Both work best when application boundaries are clear.
+
+## The testing layers
+
+### Unit tests
+
+Test an entity through its public behavior without network or database dependencies:
+
+```js
+import { describe, expect, it } from 'vitest';
+import { Task } from './task.js';
+
+describe('Task', () => {
+  it('completes through its domain method', () => {
+    const task = new Task({ id: '1', title: 'Test it', completed: false });
+
+    task.complete();
+
+    expect(task.completed).toBe(true);
+  });
+});
+```
+
+Do not inspect private fields. Public methods and observable results define the object's contract.
+
+### Use-case tests with polymorphic fakes
+
+Inject controllable objects through the same contracts used in production:
+
+```js
+class FixedIdGenerator {
+  next() {
+    return 'task_test_1';
+  }
+}
+
+class FixedClock {
+  now() {
+    return new Date('2026-08-21T06:00:00.000Z');
+  }
+}
+
+const repository = new InMemoryTaskRepository();
+const createTask = new CreateTask({
+  taskRepository: repository,
+  idGenerator: new FixedIdGenerator(),
+  clock: new FixedClock(),
+});
+
+const task = await createTask.execute({ title: 'Test the use case' });
+
+expect(task.id).toBe('task_test_1');
+expect((await repository.findAll())).toHaveLength(1);
+```
+
+The use case requires no special test-only setter. Dependency injection makes time, identity, and persistence deterministic.
+
+### Integration tests
+
+Test several real objects together: an HTTP controller with middleware and use cases, or a repository implementation against a real test database.
+
+```js
+class TaskApiTestDriver {
+  constructor({ app, sessionCookie }) {
+    this.app = app;
+    this.sessionCookie = sessionCookie;
+  }
+
+  create(title) {
+    return request(this.app)
+      .post('/api/tasks')
+      .set('Cookie', this.sessionCookie)
+      .send({ title });
+  }
+}
+
+const driver = new TaskApiTestDriver({ app, sessionCookie: validSessionCookie });
+const response = await driver.create('Write an integration test');
+
+expect(response.status).toBe(201);
+expect(response.body.data.title).toBe('Write an integration test');
+```
+
+Use isolated test data and reset it predictably. Do not point tests at a shared production database.
+
+Run shared repository contract tests against `InMemoryTaskRepository` and `PostgresTaskRepository`. If one implementation changes return meaning or error behavior, it violates polymorphic substitutability.
+
+### End-to-end tests
+
+Drive a real browser through an important user journey:
+
+```text
+Sign in → add a task → mark it complete → refresh → confirm it remains complete
+```
+
+Keep this layer focused on valuable journeys. End-to-end tests are slower and more sensitive to unrelated interface changes.
+
+## What to test
+
+Choose cases based on risk:
+
+- normal success;
+- boundaries such as minimum and maximum length;
+- empty, missing, malformed, and duplicate input;
+- unauthenticated and unauthorized requests;
+- dependency failure and timeout behavior;
+- concurrency where two requests can conflict; and
+- an earlier bug, captured as a regression test.
+
+Avoid tests that only repeat implementation details. Assert public object behavior that matters to a caller or user.
+
+## Make tests deterministic
+
+Control time, randomness, network responses, and data by injecting `Clock`, `IdGenerator`, API client, and repository objects. Use stable selectors based on roles or labels in browser tests. Wait for an observable result, not an arbitrary sleep.
+
+Flaky tests reduce trust. Fix or quarantine them with an owner and deadline; do not normalize repeated retries as success.
+
+## A systematic debugging loop
+
+1. Reproduce the issue with exact inputs and environment.
+2. Reduce it to the smallest failing case.
+3. Locate the failing boundary: browser, network, API, database, or deployment.
+4. State a testable hypothesis.
+5. Inspect evidence or add a focused temporary diagnostic.
+6. Change one cause.
+7. Verify the original failure and nearby behavior.
+8. Add a regression test when practical.
+9. Remove noisy temporary diagnostics.
+
+## Debug by layer
+
+### Browser
+
+Check the console, DOM, computed styles, event listeners, application storage, and network request. Confirm that the code running in the browser matches the source you edited.
+
+### HTTP
+
+Inspect method, full URL, headers, body, status, response body, timing, CORS behavior, and request ID. Reproduce the request with an API client to separate frontend code from server behavior.
+
+### Server
+
+Use structured logs filtered by request ID. Check which route and identity were selected, validation output, dependency timing, and the first internal error stack.
+
+### Database
+
+Run the parameterized query with representative values in a safe environment. Inspect constraints, locks, transaction state, indexes, and the query plan. Never experiment on production data without an approved safe procedure.
+
+## Production debugging
+
+Protect users while investigating:
+
+- avoid logging sensitive payloads;
+- use feature flags or a rollback for risky releases;
+- preserve evidence such as trace and deployment identifiers;
+- communicate impact and mitigation; and
+- write a blameless review focused on system improvements.
+
+<Info>
+“It does not work” becomes debuggable when written as: “PATCH `/api/tasks/task_42` returns `403` for user `user_7` after deployment `abc123`, with request ID `req_b7f3`.”
+</Info>

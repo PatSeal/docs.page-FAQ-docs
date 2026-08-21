@@ -1,0 +1,105 @@
+---
+title: Prepare for Production
+description: Configure, secure, deploy, and verify a production web application.
+---
+
+A production-ready application starts consistently, fails clearly, protects data, and gives operators enough evidence to respond.
+
+## Build a production artifact
+
+The frontend build should create optimized, versioned static assets. The server package should contain only the runtime code and dependencies it needs.
+
+An artifact should be:
+
+- immutable after it is built;
+- identified by a commit or release version;
+- reproducible from source and a lockfile;
+- scanned and tested before release; and
+- usable in every later environment with external configuration.
+
+Containers are one way to package an artifact, but they are not required. If used, choose a small maintained base image, run as a non-root user, copy only required files, and rebuild regularly for security updates.
+
+## Validate configuration at startup
+
+```js
+class Configuration {
+  constructor(environment) {
+    this.databaseUrl = this.require(environment, 'DATABASE_URL');
+    this.sessionSecret = this.require(environment, 'SESSION_SECRET');
+    this.publicAppOrigin = this.require(environment, 'PUBLIC_APP_ORIGIN');
+  }
+
+  require(environment, name) {
+    const value = environment[name];
+    if (!value) {
+      throw new Error(`Missing required configuration: ${name}`);
+    }
+    return value;
+  }
+}
+
+const configuration = new Configuration(process.env);
+```
+
+Also validate formats and allowed values. Fail before accepting traffic instead of discovering a missing setting during a user request.
+
+## Serve through HTTPS
+
+Terminate TLS at a trusted platform, load balancer, or web server. Redirect HTTP to HTTPS, then enable Strict Transport Security only after confirming that all required subdomains support HTTPS.
+
+Use secure cookies in production and configure the application to understand trusted proxy headers only from known infrastructure.
+
+## Configure DNS
+
+DNS connects a hostname to a service. Changes can be cached for their time-to-live value. Plan cutovers by lowering TTL in advance when necessary, verify ownership records, and keep a record of which platform controls each zone and certificate.
+
+## Apply database migrations safely
+
+Run migrations once per release through a controlled job, not independently from every application instance. For changes that cannot happen instantly, use an expand-and-contract sequence:
+
+1. add backward-compatible schema;
+2. deploy code that works with old and new shapes;
+3. backfill data in bounded batches;
+4. switch reads to the new shape;
+5. remove old code and schema in a later release.
+
+Back up important data and understand the rollback limitation before destructive schema work.
+
+## Use safe release strategies
+
+- **Rolling deployment** replaces instances gradually.
+- **Blue-green deployment** prepares a second environment and switches traffic.
+- **Canary deployment** sends a small share of traffic to the new version first.
+- **Feature flags** separate code deployment from feature exposure.
+
+Choose based on impact, infrastructure support, and how quickly health signals can detect failure.
+
+## Shut down gracefully
+
+When the platform asks an instance to stop:
+
+1. stop accepting new work;
+2. finish in-flight requests within a deadline;
+3. stop consumers and scheduled work;
+4. close database and network connections; and
+5. exit so the platform can replace the instance.
+
+Make background jobs safe to resume after interruption.
+
+## Production checklist
+
+- Required configuration is validated.
+- Secrets are stored outside source and limited by role.
+- HTTPS and secure cookie behavior are verified.
+- CORS and allowed origins are exact.
+- Migrations have a forward and recovery plan.
+- Health checks represent the intended state.
+- Static asset caching is correct.
+- Logs omit secrets and include release and request IDs.
+- Alerts and dashboards exist before launch.
+- Backups are enabled and restoration has been tested.
+- Rollback or feature-disable steps are written down.
+
+<Warning>
+Do not make a high-risk production change late in a release without a tested recovery path. “We can fix forward” is not a rollback plan.
+</Warning>

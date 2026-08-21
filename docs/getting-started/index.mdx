@@ -1,10 +1,48 @@
 ---
-title: Getting Started
-description: Create an account, log in, and set up Avodah on your phone.
+title: Start Here
+description: Understand the learning path, set up your tools, and build your first web page.
 ---
 
-New to Avodah? Start here. This section walks you through creating an account, logging in, and getting the app set up on your phone so notifications and the rest of the app work the way they should.
+Web development can look overwhelming because it contains many tools. The core is smaller than it seems: a browser reads HTML for structure, CSS for presentation, and JavaScript for behavior. A server and database are added when an application needs shared or permanent data.
 
-- [Creating an account](/getting-started/creating-an-account)
-- [Logging in](/getting-started/logging-in)
-- [Installing to your home screen](/getting-started/installing-to-your-home-screen)
+This handbook uses **progressive learning**. You will first make something visible, then interactive, then connected to a backend. Each layer has a clear job.
+
+## Recommended order
+
+1. Learn [how the web works](/getting-started/how-the-web-works).
+2. [Set up your workspace](/getting-started/set-up).
+3. [Build your first page](/getting-started/first-page).
+4. Practice [HTML, CSS, and JavaScript](/fundamentals).
+5. Learn [object-oriented JavaScript](/fundamentals/object-oriented-javascript).
+6. Structure a larger [frontend](/frontend) with collaborating objects.
+7. Create a layered [backend API](/backend).
+8. Store information behind [repository contracts](/data).
+9. Connect everything in a [SOLID full-stack application](/full-stack).
+10. [Deploy and monitor](/deployment) the result.
+
+## Learn by building
+
+Reading gives you a map; building gives you skill. After every topic:
+
+- type the example instead of copying it blindly;
+- change one value and predict the result;
+- explain the code aloud in your own words;
+- make a tiny project without looking at the finished example; and
+- use browser developer tools when the result is unexpected.
+
+## The technologies used here
+
+The first examples use plain HTML, CSS, and JavaScript because every frontend framework builds on those technologies. Later examples use:
+
+- **Node.js** to run JavaScript outside the browser;
+- **Express** to demonstrate server routing;
+- **PostgreSQL-style SQL** to demonstrate relational data; and
+- the browser's built-in **Fetch API** to connect frontend and backend.
+
+Application behavior is organized with classes and objects throughout. HTML remains semantic markup, CSS remains a presentation language, and SQL remains declarative; OOP governs the JavaScript architecture that coordinates those technologies.
+
+These are teaching choices, not the only valid stack. The concepts transfer to other languages, frameworks, and databases.
+
+<Info>
+Move on when you can build a small example and explain why it works. You do not need complete mastery before learning the next layer.
+</Info>

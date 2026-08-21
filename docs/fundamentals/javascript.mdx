@@ -1,0 +1,319 @@
+---
+title: "JavaScript: Logic and Objects"
+description: Learn JavaScript values, collections, methods, modules, and asynchronous behavior through objects.
+---
+
+JavaScript is a programming language used in browsers and on servers such as Node.js. In this handbook, application state and behavior are organized into objects with focused responsibilities.
+
+## Values and fields
+
+Objects store values in fields:
+
+```js
+class CourseProgress {
+  #courseName;
+  #completedLessons;
+  #published;
+
+  constructor({ courseName, completedLessons = 0, published = false }) {
+    this.#courseName = courseName;
+    this.#completedLessons = completedLessons;
+    this.#published = published;
+  }
+
+  get courseName() {
+    return this.#courseName;
+  }
+
+  get completedLessons() {
+    return this.#completedLessons;
+  }
+
+  get published() {
+    return this.#published;
+  }
+}
+
+const progress = new CourseProgress({
+  courseName: 'Web fundamentals',
+  completedLessons: 2,
+  published: true,
+});
+```
+
+Common value types include strings, numbers, booleans, `null`, `undefined`, objects, and functions. `const` prevents reassignment of the variable; it does not make the referenced object immutable.
+
+## Protect state with private fields
+
+```js
+class CourseProgress {
+  #courseName;
+  #totalLessons;
+  #completedLessons;
+
+  constructor({ courseName, totalLessons, completedLessons = 0 }) {
+    if (totalLessons < 1) throw new Error('A course needs at least one lesson.');
+
+    this.#courseName = courseName;
+    this.#totalLessons = totalLessons;
+    this.#completedLessons = completedLessons;
+  }
+
+  get completedLessons() {
+    return this.#completedLessons;
+  }
+
+  completeLesson() {
+    if (this.#completedLessons < this.#totalLessons) {
+      this.#completedLessons += 1;
+    }
+  }
+
+  completionPercentage() {
+    return Math.round((this.#completedLessons / this.#totalLessons) * 100);
+  }
+}
+```
+
+The class prevents a completed count above the total and provides a meaningful operation instead of a general setter.
+
+## Objects and collections
+
+An entity represents one task. A collection object owns operations across tasks:
+
+```js
+class Task {
+  #id;
+  #title;
+  #completed;
+
+  constructor({ id, title, completed = false }) {
+    this.#id = id;
+    this.#title = title;
+    this.#completed = completed;
+  }
+
+  get id() {
+    return this.#id;
+  }
+
+  get title() {
+    return this.#title;
+  }
+
+  get completed() {
+    return this.#completed;
+  }
+
+  complete() {
+    this.#completed = true;
+  }
+}
+
+class TaskCollection {
+  #tasks;
+
+  constructor(tasks = []) {
+    this.#tasks = [...tasks];
+  }
+
+  add(task) {
+    this.#tasks = [...this.#tasks, task];
+  }
+
+  openTasks() {
+    return this.#tasks.filter((task) => !task.completed);
+  }
+
+  titles() {
+    return this.#tasks.map((task) => task.title);
+  }
+
+  findById(taskId) {
+    return this.#tasks.find((task) => task.id === taskId) ?? null;
+  }
+
+  toArray() {
+    return [...this.#tasks];
+  }
+}
+```
+
+The array callbacks are implementation details inside `TaskCollection`. Callers use the collection's domain language and cannot mutate its internal array.
+
+## Decisions belong near the state
+
+```js
+class Task {
+  #completed;
+
+  statusLabel() {
+    return this.#completed ? 'Complete' : 'In progress';
+  }
+}
+```
+
+The decision uses the task's private state, so the task owns it. A view can display `task.statusLabel()` without reproducing the rule.
+
+## Methods express behavior
+
+An instance method acts on one object's state. A static method belongs to the class as a whole:
+
+```js
+class TaskTitle {
+  #value;
+
+  constructor(value) {
+    const normalized = String(value).trim();
+    if (!TaskTitle.isValid(normalized)) {
+      throw new Error('Task title must contain 2 to 120 characters.');
+    }
+    this.#value = normalized;
+  }
+
+  static isValid(value) {
+    return value.length >= 2 && value.length <= 120;
+  }
+
+  toString() {
+    return this.#value;
+  }
+}
+```
+
+Use static methods only when behavior does not need one instance. Avoid static mutable state because it becomes a hidden global dependency.
+
+## Composition and delegation
+
+Objects should delegate work they do not own:
+
+```js
+class ProgressReporter {
+  constructor({ progressView, progressCalculator }) {
+    this.progressView = progressView;
+    this.progressCalculator = progressCalculator;
+  }
+
+  showFor(tasks) {
+    const percentage = this.progressCalculator.calculate(tasks);
+    this.progressView.show(percentage);
+  }
+}
+```
+
+`ProgressReporter` coordinates. It does not calculate and render by itself.
+
+## Errors are meaningful objects
+
+```js
+class ValidationError extends Error {
+  constructor({ field, message }) {
+    super(message);
+    this.name = 'ValidationError';
+    this.field = field;
+    this.code = 'VALIDATION_FAILED';
+  }
+}
+```
+
+Throw a specific error when an object cannot establish or preserve a valid state. Catch it at a boundary that can recover or present feedback.
+
+## Promises and async methods
+
+Network and file operations finish later. An `async` method always returns a Promise:
+
+```js
+class TaskApiClient {
+  constructor({ baseUrl = '/api', fetchImplementation = fetch }) {
+    this.baseUrl = baseUrl;
+    this.fetchImplementation = fetchImplementation;
+  }
+
+  async list() {
+    const response = await this.fetchImplementation(`${this.baseUrl}/tasks`);
+
+    if (!response.ok) {
+      throw new Error(`Request failed with status ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.data.map((item) => new Task(item));
+  }
+}
+```
+
+The Fetch implementation is injected, so the client can use a controlled substitute in tests.
+
+An application controller handles success and failure:
+
+```js
+class TaskPageController {
+  constructor({ taskApiClient, taskListView, errorView }) {
+    this.taskApiClient = taskApiClient;
+    this.taskListView = taskListView;
+    this.errorView = errorView;
+  }
+
+  load = async () => {
+    this.taskListView.showLoading();
+
+    try {
+      const tasks = await this.taskApiClient.list();
+      this.taskListView.showTasks(tasks);
+    } catch (error) {
+      this.errorView.show('Tasks could not be loaded. Please try again.');
+      console.error(error);
+    }
+  };
+}
+```
+
+Users receive a helpful message, while developers retain the technical detail.
+
+## Modules keep classes focused
+
+Export one main class per module when practical:
+
+```js
+// domain/task.js
+export class Task {
+  // Entity behavior
+}
+```
+
+```js
+// infrastructure/task-api-client.js
+import { Task } from '../domain/task.js';
+
+export class TaskApiClient {
+  // HTTP adapter behavior
+}
+```
+
+```js
+// main.js — composition root
+import { TaskApiClient } from './infrastructure/task-api-client.js';
+import { TaskPageController } from './ui/task-page-controller.js';
+
+const taskPageController = new TaskPageController({
+  taskApiClient: new TaskApiClient({}),
+  taskListView: new TaskListView({ root: document.querySelector('#task-list') }),
+  errorView: new ErrorView({ root: document.querySelector('#error-message') }),
+});
+
+taskPageController.load();
+```
+
+In browser HTML, load the entry file with `<script type="module" src="main.js"></script>`.
+
+## Practice
+
+Create:
+
+1. a `TaskTitle` value object;
+2. a `Task` entity with `complete()`, `reopen()`, and `rename()`;
+3. a `TaskCollection` that returns open and complete tasks without exposing its internal array;
+4. a `ProgressCalculator` object; and
+5. tests that use only the public methods.
+
+Continue with [Object-oriented JavaScript](/fundamentals/object-oriented-javascript) for the full OOP model.

@@ -1,0 +1,107 @@
+---
+title: OOP Review Checklist
+description: Review object responsibilities, SOLID boundaries, dependencies, and tests before merging a feature.
+---
+
+Use this checklist during design and code review. A “no” identifies a conversation or improvement; it does not automatically require another abstraction.
+
+## Domain model
+
+- [ ] Important domain state belongs to an entity or value object.
+- [ ] Each entity protects its invariants through public methods.
+- [ ] Callers cannot place an entity into an invalid state by assigning public fields.
+- [ ] Value objects validate and normalize their value at construction.
+- [ ] Domain objects do not import DOM, Express, SQL driver, or deployment code.
+- [ ] Domain errors use meaningful types or stable codes.
+
+## Responsibilities
+
+- [ ] Every class has one clear sentence describing its job.
+- [ ] A class has one primary reason to change.
+- [ ] Controllers translate input and output instead of implementing business rules.
+- [ ] Use cases coordinate one application action.
+- [ ] Repositories handle persistence translation only.
+- [ ] Views render and report user intentions without calling the database.
+- [ ] No “manager,” “helper,” or “utils” object has become a home for unrelated behavior.
+
+## Encapsulation
+
+- [ ] Mutable state is private or otherwise protected.
+- [ ] Public methods express domain intentions such as `complete()` rather than generic setters.
+- [ ] Getters do not expose a mutable internal collection.
+- [ ] Constructors establish a valid initial state.
+- [ ] Methods preserve invariants after both success and failure.
+
+## Abstraction and contracts
+
+- [ ] Each dependency contract contains only the operations its caller needs.
+- [ ] Contracts use application language instead of framework or database language.
+- [ ] Return values and error behavior are documented and consistent.
+- [ ] Alternative implementations honor the same behavioral contract.
+- [ ] A database row, HTTP response, or third-party payload is mapped before entering the domain.
+
+## Composition and inheritance
+
+- [ ] Collaborators are composed through fields rather than inherited for code reuse.
+- [ ] Constructor injection makes required dependencies visible.
+- [ ] Optional behavior uses a clear default object rather than repeated null checks when appropriate.
+- [ ] Inheritance represents a real substitutable “is-a” relationship.
+- [ ] A subtype does not weaken validation, change return meaning, or throw surprising error types.
+- [ ] The inheritance tree remains shallow and understandable.
+
+## SOLID
+
+- [ ] **S:** each class has a focused responsibility.
+- [ ] **O:** a new adapter or policy can be added without rewriting stable use cases.
+- [ ] **L:** every subtype can replace its base contract safely.
+- [ ] **I:** callers depend on small focused interfaces.
+- [ ] **D:** business rules depend on application-owned abstractions, not concrete infrastructure.
+
+## Dependency flow
+
+- [ ] The composition root is the main place that calls constructors for concrete infrastructure.
+- [ ] Domain and use-case layers do not create database pools, HTTP clients, clocks, or random ID generators.
+- [ ] Framework request and response objects stop at the controller boundary.
+- [ ] SQL stops at the repository boundary.
+- [ ] External service payloads stop at adapter boundaries.
+- [ ] Dependencies point toward domain and application policy.
+
+## Frontend objects
+
+- [ ] A controller owns the interaction workflow.
+- [ ] View objects own DOM queries and rendering.
+- [ ] API clients own HTTP serialization and response parsing.
+- [ ] Domain or view-model objects own interface state transitions.
+- [ ] Event listeners delegate to bound controller or view methods.
+- [ ] Loading, empty, success, validation, and failure states are explicit.
+
+## Backend objects
+
+- [ ] HTTP controllers are thin and use stable request/response presenters.
+- [ ] Authentication and authorization policies are separate responsibilities.
+- [ ] Use cases enforce business rules independently of Express.
+- [ ] Repository implementations use parameterized queries.
+- [ ] Error middleware translates known error objects and hides unexpected internals.
+- [ ] Infrastructure objects have bounded timeouts, pools, and retry behavior.
+
+## Tests
+
+- [ ] Entity tests call public methods and assert observable behavior.
+- [ ] Use-case tests inject fakes through the real dependency contracts.
+- [ ] Shared contract tests run against repository implementations where valuable.
+- [ ] Tests do not reach into private fields.
+- [ ] A substitute behaves like production for the behavior the test relies on.
+- [ ] Integration tests cover mapping at HTTP and database boundaries.
+
+## Complexity check
+
+- [ ] Every abstraction solves a current clarity, replacement, or testing need.
+- [ ] A simple value is not wrapped in several objects without a protected rule.
+- [ ] A class is not empty ceremony around a single unrelated call.
+- [ ] Names describe business meaning rather than a design pattern alone.
+- [ ] The object graph can be understood from the composition root.
+- [ ] Removing a class would make a responsibility less clear, not merely reduce the class count.
+
+<Info>
+OOP quality comes from clear responsibilities and contracts, not the maximum possible number of classes. Choose the smallest object model that protects the rules and keeps dependencies replaceable.
+</Info>

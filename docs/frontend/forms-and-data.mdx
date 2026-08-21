@@ -1,0 +1,241 @@
+---
+title: Forms, API Clients, and Controllers
+description: Collect input and manage network lifecycles with focused frontend objects.
+---
+
+Forms and API requests meet at a trust boundary. Object-oriented boundaries keep DOM behavior, HTTP serialization, and workflow state separate.
+
+## Start with real form controls
+
+```html
+<form id="task-form">
+  <div>
+    <label for="task-title">Task title</label>
+    <input
+      id="task-title"
+      name="title"
+      type="text"
+      minlength="2"
+      maxlength="120"
+      required
+      aria-describedby="title-help title-error"
+    />
+    <p id="title-help">Use 2 to 120 characters.</p>
+    <p id="title-error" role="alert"></p>
+  </div>
+
+  <button type="submit">Add task</button>
+</form>
+```
+
+Native constraints provide a useful baseline. Server validation remains required.
+
+## Encapsulate form behavior in a view
+
+```js
+class TaskFormView {
+  constructor({ form }) {
+    this.form = form;
+    this.titleInput = form.elements.namedItem('title');
+    this.errorElement = form.querySelector('#title-error');
+    this.submitButton = form.querySelector('button[type="submit"]');
+  }
+
+  onSubmit(handler) {
+    this.form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      handler({ title: this.titleInput.value });
+    });
+  }
+
+  showSubmitting() {
+    this.submitButton.disabled = true;
+    this.submitButton.textContent = 'Adding…';
+  }
+
+  showReady() {
+    this.submitButton.disabled = false;
+    this.submitButton.textContent = 'Add task';
+  }
+
+  showError(message) {
+    this.titleInput.setAttribute('aria-invalid', 'true');
+    this.errorElement.textContent = message;
+  }
+
+  reset() {
+    this.form.reset();
+    this.titleInput.removeAttribute('aria-invalid');
+    this.errorElement.textContent = '';
+    this.titleInput.focus();
+  }
+}
+```
+
+The view owns DOM details but not task rules or HTTP.
+
+## Encapsulate HTTP in an API client
+
+```js
+class ApiError extends Error {
+  constructor({ status, code, message, details }) {
+    super(message);
+    this.status = status;
+    this.code = code;
+    this.details = details;
+  }
+}
+
+class TaskApiClient {
+  constructor({ baseUrl = '/api', fetchImplementation = fetch }) {
+    this.baseUrl = baseUrl;
+    this.fetchImplementation = fetchImplementation;
+  }
+
+  async create({ title }) {
+    const response = await this.fetchImplementation(`${this.baseUrl}/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new ApiError({ status: response.status, ...result.error });
+    }
+
+    return new Task(result.data);
+  }
+
+  async list({ signal } = {}) {
+    const response = await this.fetchImplementation(`${this.baseUrl}/tasks`, { signal });
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new ApiError({ status: response.status, ...result.error });
+    }
+
+    return result.data.map((item) => new Task(item));
+  }
+}
+```
+
+`TaskApiClient` maps transport data into `Task` objects. Other application objects never handle raw Fetch responses.
+
+## Coordinate the submit lifecycle
+
+```js
+class CreateTaskController {
+  constructor({ formView, taskApiClient, taskCollection, taskListView }) {
+    this.formView = formView;
+    this.taskApiClient = taskApiClient;
+    this.taskCollection = taskCollection;
+    this.taskListView = taskListView;
+  }
+
+  start() {
+    this.formView.onSubmit(this.handleSubmit);
+  }
+
+  handleSubmit = async ({ title }) => {
+    this.formView.showSubmitting();
+
+    try {
+      const task = await this.taskApiClient.create({ title });
+      this.taskCollection.add(task);
+      this.taskListView.render(this.taskCollection.visible());
+      this.formView.reset();
+    } catch (error) {
+      this.formView.showError(error.message);
+    } finally {
+      this.formView.showReady();
+    }
+  };
+}
+```
+
+The controller knows the workflow. It delegates interface, transport, and collection operations to their owners.
+
+## Model loading with an object
+
+```js
+class LoadTasksController {
+  constructor({ taskApiClient, taskCollection, taskListView, loadState }) {
+    this.taskApiClient = taskApiClient;
+    this.taskCollection = taskCollection;
+    this.taskListView = taskListView;
+    this.loadState = loadState;
+  }
+
+  load = async () => {
+    this.loadState.start();
+    this.taskListView.renderState(this.loadState);
+
+    try {
+      const tasks = await this.taskApiClient.list();
+      this.taskCollection.replace(tasks);
+      this.loadState.succeed();
+    } catch (error) {
+      this.loadState.fail(error);
+    }
+
+    this.taskListView.renderState(this.loadState, this.taskCollection.visible());
+  };
+}
+```
+
+An empty collection is a successful state, not an error. The view can show “Add your first task.”
+
+## Prevent stale search results
+
+```js
+class TaskSearchController {
+  #requestController;
+
+  constructor({ taskApiClient, searchResultsView }) {
+    this.taskApiClient = taskApiClient;
+    this.searchResultsView = searchResultsView;
+  }
+
+  search = async (query) => {
+    this.#requestController?.abort();
+    this.#requestController = new AbortController();
+
+    try {
+      const tasks = await this.taskApiClient.search({
+        query,
+        signal: this.#requestController.signal,
+      });
+      this.searchResultsView.render(tasks);
+    } catch (error) {
+      if (error.name !== 'AbortError') this.searchResultsView.showError();
+    }
+  };
+}
+```
+
+The controller owns the lifecycle of the current search request. A debouncer can be injected as another collaborator when needed.
+
+## Client validation is not security
+
+Anyone can bypass the interface and send an HTTP request directly. The `TaskTitle` value object improves browser consistency, but the server must independently apply its own trusted `TaskTitle` rule, permission policy, and database constraints.
+
+## Composition root
+
+```js
+const taskCollection = new TaskCollection();
+const taskApiClient = new TaskApiClient({});
+const taskListView = new TaskListView({ root: document.querySelector('#task-list') });
+
+const createTaskController = new CreateTaskController({
+  formView: new TaskFormView({ form: document.querySelector('#task-form') }),
+  taskApiClient,
+  taskCollection,
+  taskListView,
+});
+
+createTaskController.start();
+```
+
+Shared collaborators are created once and injected explicitly instead of imported as mutable global singletons.

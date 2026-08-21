@@ -1,8 +1,8 @@
 {
-  "name": "Avodah Help Center",
-  "description": "Everything you need to know to use Avodah.",
+  "name": "Web Development Handbook",
+  "description": "A practical, beginner-friendly, object-oriented guide from your first web page to a production-ready full-stack application.",
   "theme": {
-    "primary": "#2563EB"
+    "primary": "#7C3AED"
   },
   "header": {
     "showGitHubCard": true
@@ -10,61 +10,97 @@
   "sidebar": [
     {
       "pages": [
-        { "title": "Help Center", "href": "/", "icon": "house" }
+        { "title": "Web Development Handbook", "href": "/", "icon": "house" }
       ]
     },
     {
-      "group": "Getting Started",
+      "group": "Start Here",
       "icon": "rocket",
       "pages": [
-        { "title": "Overview", "href": "/getting-started" },
-        { "title": "Creating an account", "href": "/getting-started/creating-an-account" },
-        { "title": "Logging in", "href": "/getting-started/logging-in" },
-        { "title": "Installing to your home screen", "href": "/getting-started/installing-to-your-home-screen" }
+        { "title": "Learning path", "href": "/getting-started" },
+        { "title": "How the web works", "href": "/getting-started/how-the-web-works" },
+        { "title": "Set up your workspace", "href": "/getting-started/set-up" },
+        { "title": "Build your first page", "href": "/getting-started/first-page" }
       ]
     },
     {
-      "group": "Using Avodah",
-      "icon": "grip",
+      "group": "Web Fundamentals",
+      "icon": "code",
       "pages": [
-        { "title": "Overview", "href": "/using-the-app" },
-        { "title": "Home & dashboard", "href": "/using-the-app/home-and-dashboard" },
-        { "title": "Turning on notifications", "href": "/using-the-app/notifications" },
-        { "title": "Profile & account settings", "href": "/using-the-app/profile-and-account-settings" }
+        { "title": "Overview", "href": "/fundamentals" },
+        { "title": "HTML: structure", "href": "/fundamentals/html" },
+        { "title": "CSS: presentation", "href": "/fundamentals/css" },
+        { "title": "Responsive design", "href": "/fundamentals/responsive-design" },
+        { "title": "JavaScript: behavior", "href": "/fundamentals/javascript" },
+        { "title": "Object-oriented JavaScript", "href": "/fundamentals/object-oriented-javascript" },
+        { "title": "The DOM and events", "href": "/fundamentals/dom-and-events" }
       ]
     },
     {
-      "group": "Groups",
-      "icon": "users",
+      "group": "Frontend Development",
+      "icon": "desktop",
       "pages": [
-        { "title": "Overview", "href": "/groups" },
-        { "title": "Joining a group", "href": "/groups/joining-a-group" },
-        { "title": "Group chat & updates", "href": "/groups/group-chat-and-updates" }
+        { "title": "Overview", "href": "/frontend" },
+        { "title": "Tooling and modules", "href": "/frontend/tooling" },
+        { "title": "Components and state", "href": "/frontend/components-and-state" },
+        { "title": "Forms and API data", "href": "/frontend/forms-and-data" },
+        { "title": "Accessibility", "href": "/frontend/accessibility" },
+        { "title": "Performance", "href": "/frontend/performance" }
       ]
     },
     {
-      "group": "Events",
-      "icon": "calendar",
+      "group": "Backend Development",
+      "icon": "server",
       "pages": [
-        { "title": "Overview", "href": "/events" },
-        { "title": "Viewing events", "href": "/events/viewing-events" },
-        { "title": "RSVP & check-in", "href": "/events/rsvp-and-check-in" }
+        { "title": "Overview", "href": "/backend" },
+        { "title": "Servers and routing", "href": "/backend/servers-and-routing" },
+        { "title": "Build a Node API", "href": "/backend/node-api" },
+        { "title": "Validation and errors", "href": "/backend/validation-and-errors" },
+        { "title": "Authentication", "href": "/backend/authentication" }
       ]
     },
     {
-      "group": "Giving",
-      "icon": "hand-holding-heart",
+      "group": "Data and Databases",
+      "icon": "database",
       "pages": [
-        { "title": "Overview", "href": "/giving" },
-        { "title": "Making a gift", "href": "/giving/making-a-gift" },
-        { "title": "Giving history & receipts", "href": "/giving/giving-history-and-receipts" }
+        { "title": "Overview", "href": "/data" },
+        { "title": "Database concepts", "href": "/data/databases" },
+        { "title": "SQL and schema design", "href": "/data/sql-and-schema" },
+        { "title": "Safe data access", "href": "/data/data-access" }
       ]
     },
     {
-      "group": "FAQ",
-      "icon": "circle-question",
+      "group": "Full-Stack Development",
+      "icon": "layer-group",
       "pages": [
-        { "title": "Frequently Asked Questions", "href": "/faq" }
+        { "title": "Overview", "href": "/full-stack" },
+        { "title": "OOP and SOLID design", "href": "/full-stack/oop-solid-design" },
+        { "title": "Application architecture", "href": "/full-stack/architecture" },
+        { "title": "Build a task app", "href": "/full-stack/task-app" },
+        { "title": "Testing and debugging", "href": "/full-stack/testing-debugging" },
+        { "title": "Web security", "href": "/full-stack/security" }
+      ]
+    },
+    {
+      "group": "Deploy and Operate",
+      "icon": "cloud",
+      "pages": [
+        { "title": "Overview", "href": "/deployment" },
+        { "title": "Prepare for production", "href": "/deployment/production" },
+        { "title": "CI/CD", "href": "/deployment/ci-cd" },
+        { "title": "Monitoring and maintenance", "href": "/deployment/monitoring" }
+      ]
+    },
+    {
+      "group": "Reference",
+      "icon": "book-open",
+      "pages": [
+        { "title": "Reference home", "href": "/reference" },
+        { "title": "Git and collaboration", "href": "/reference/git-and-collaboration" },
+        { "title": "Learning roadmap", "href": "/reference/roadmap" },
+        { "title": "OOP review checklist", "href": "/reference/oop-checklist" },
+        { "title": "Glossary", "href": "/reference/glossary" },
+        { "title": "Common questions", "href": "/reference/faq" }
       ]
     }
   ]

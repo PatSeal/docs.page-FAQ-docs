@@ -1,0 +1,73 @@
+---
+title: Continuous Integration and Delivery
+description: Automate repeatable checks, builds, and controlled releases.
+---
+
+**Continuous integration (CI)** verifies every proposed change in a clean environment. **Continuous delivery (CD)** keeps a verified artifact ready for release. Continuous deployment automatically releases every passing change; it is a separate choice.
+
+## A useful pipeline
+
+For a full-stack application:
+
+```text
+Install from lockfile
+  → lint and format check
+  → unit tests
+  → integration tests with a temporary database
+  → frontend production build
+  → dependency and secret scans
+  → package one artifact
+  → deploy to staging
+  → smoke test
+  → approved or automated production rollout
+  → post-deploy verification
+```
+
+Run independent checks in parallel when that reduces feedback time. Fail quickly on basic errors, but do not hide other useful results unnecessarily.
+
+## Keep the environment clean
+
+CI should install dependencies from the committed lockfile rather than reusing a developer's local modules. Pin action and tool versions deliberately. Cache downloaded dependencies only as an optimization; the pipeline must remain correct without the cache.
+
+Use an isolated database or ephemeral service for integration tests. Never connect CI tests to production.
+
+## Protect credentials
+
+- Store deployment credentials in the CI platform's secret or identity system.
+- Prefer short-lived workload identity over permanent access keys.
+- Restrict production environments and require appropriate reviewers for high-risk releases.
+- Do not expose secrets to untrusted pull requests.
+- Mask sensitive output and avoid printing full environment values.
+- Give each job only the permissions it needs.
+
+## Build once, promote the artifact
+
+If staging and production are built separately, they can receive different dependency resolution or generated output. Build once, identify the artifact, and promote the same artifact through environments.
+
+Record provenance such as source commit, build run, dependency lockfile, and creation time.
+
+## Make deployments recoverable
+
+The pipeline should know the previously healthy release. A rollback must be quick, documented, and compatible with recent database changes.
+
+Use backward-compatible schema changes so old and new application versions can run during a rollout and rollback. A feature flag can disable risky behavior without redeploying, but flags need owners and cleanup dates.
+
+## Keep checks meaningful
+
+Required checks should be stable and relevant. A slow, flaky pipeline encourages unsafe bypasses. Measure queue time, execution time, failure causes, rerun rate, and deployment success. Fix the largest sources of delay and noise.
+
+## A minimal pull-request policy
+
+Before merge:
+
+- at least one appropriate review is complete;
+- required automated checks pass;
+- the branch is current enough to avoid a hidden integration conflict;
+- sensitive changes receive security or operations review where defined; and
+- the change includes migrations, documentation, and monitoring updates it requires.
+
+After deployment, verify a real critical path and watch error rate, latency, saturation, and relevant business signals for the rollout window.
+
+<Info>
+Automation should make the safe path the easy path. A pipeline is successful when it provides fast evidence and a controlled release, not when it merely contains many tools.
+</Info>

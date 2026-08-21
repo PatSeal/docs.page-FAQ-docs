@@ -1,0 +1,230 @@
+---
+title: OOP and SOLID Design
+description: Apply object-oriented and SOLID principles consistently across a full-stack application.
+---
+
+The task application uses an object-oriented architecture from the browser to the database boundary. Each layer contains focused objects and depends inward toward application rules.
+
+## The object map
+
+```text
+Browser event
+  → TaskPageController
+  → TaskApiClient
+  → HTTP
+  → TaskHttpController
+  → CreateTask / CompleteTask use case
+  → Task entity
+  → TaskRepository contract
+  → PostgresTaskRepository
+  → Database
+```
+
+Supporting objects include `TaskTitle`, `Clock`, `IdGenerator`, `PasswordHasher`, `SessionStore`, `TaskListView`, and `ErrorPresenter`.
+
+## Responsibilities by object type
+
+| Object type | Responsibility | Must not know |
+| --- | --- | --- |
+| Entity | Protect domain identity, state, and invariants | DOM, Express, SQL |
+| Value object | Validate and represent one meaningful value | Controllers or persistence |
+| Use case | Coordinate one application action | HTTP response objects or SQL syntax |
+| Controller | Translate an external event into use-case input | Database implementation |
+| Repository contract | Describe persistence operations needed by use cases | Transport details |
+| Repository adapter | Translate entities to and from storage | DOM or HTTP presentation |
+| View | Render state and expose user intentions | Database or business workflow |
+| Infrastructure adapter | Wrap a framework or external service | Unrelated application rules |
+
+## Single Responsibility Principle
+
+A class should have one primary reason to change.
+
+An unfocused `TaskManager` that reads forms, validates titles, calls Fetch, writes SQL, sends email, renders HTML, and logs errors would have many unrelated reasons to change.
+
+Use focused boundaries instead:
+
+```js
+class TaskFormView {}
+class TaskPageController {}
+class CreateTask {}
+class Task {}
+class PostgresTaskRepository {}
+class TaskCreatedNotifier {}
+```
+
+The number of classes is not the goal. Separation is useful when responsibilities change for different reasons or need independent tests.
+
+## Open/Closed Principle
+
+Stable business code should be open to new collaborators and closed to repeated modification.
+
+```js
+class TaskCreatedNotifier {
+  constructor({ notificationChannels }) {
+    this.notificationChannels = notificationChannels;
+  }
+
+  async notify(task, user) {
+    await Promise.all(
+      this.notificationChannels.map((channel) => channel.send(task, user)),
+    );
+  }
+}
+```
+
+`EmailTaskChannel`, `PushTaskChannel`, and a test fake can all implement `send`. Adding a channel does not rewrite the notifier.
+
+## Liskov Substitution Principle
+
+Every implementation of a contract must honor the same promises.
+
+If `TaskRepository.save(task)` promises to return the stored task or throw a repository error, an in-memory implementation must not quietly return `undefined`, and a SQL implementation must not return a raw database row with different field names.
+
+Tests for a shared repository contract can run against every implementation.
+
+## Interface Segregation Principle
+
+Objects should not depend on methods they do not use. Avoid one enormous data gateway:
+
+```text
+ApplicationRepository
+  users, tasks, billing, reports, audit logs, files, email...
+```
+
+Prefer focused contracts such as `TaskRepository`, `UserRepository`, and `SessionStore`. A read-only report object can depend on a `TaskReportReader` instead of every task mutation method.
+
+## Dependency Inversion Principle
+
+High-level policy depends on abstractions. Infrastructure supplies implementations:
+
+```js
+class CompleteTask {
+  constructor({ taskRepository }) {
+    this.taskRepository = taskRepository;
+  }
+
+  async execute({ taskId, ownerId }) {
+    const task = await this.taskRepository.findOwnedById(taskId, ownerId);
+
+    if (!task) {
+      throw new TaskNotFoundError(taskId);
+    }
+
+    task.complete();
+    return this.taskRepository.save(task);
+  }
+}
+```
+
+`CompleteTask` knows the repository contract, not PostgreSQL. The composition root injects `PostgresTaskRepository` in production and `InMemoryTaskRepository` in focused tests.
+
+## Composition root
+
+Create dependencies in one visible startup location:
+
+```js
+const database = new DatabasePool(configuration.databaseUrl);
+const taskRepository = new PostgresTaskRepository({ database });
+
+const createTask = new CreateTask({
+  taskRepository,
+  idGenerator: new CryptoIdGenerator(),
+  clock: new SystemClock(),
+});
+
+const completeTask = new CompleteTask({ taskRepository });
+
+const taskController = new TaskHttpController({
+  createTask,
+  completeTask,
+  listTasks: new ListTasks({ taskRepository }),
+});
+
+const app = new ExpressApp({
+  taskController,
+  logger,
+});
+```
+
+The composition root may know concrete classes. Domain entities and use cases must not.
+
+## Errors are objects too
+
+Create meaningful error types rather than passing magic strings:
+
+```js
+class DomainError extends Error {
+  constructor({ code, message, details }) {
+    super(message);
+    this.code = code;
+    this.details = details;
+  }
+}
+
+class TaskNotFoundError extends DomainError {
+  constructor(taskId) {
+    super({
+      code: 'TASK_NOT_FOUND',
+      message: 'Task not found.',
+      details: { taskId },
+    });
+  }
+}
+```
+
+An HTTP error presenter maps a domain error to a status code. The domain error does not know HTTP.
+
+## Factories for complicated creation
+
+Use a factory when construction needs several validated values or variants:
+
+```js
+class TaskFactory {
+  constructor({ idGenerator, clock }) {
+    this.idGenerator = idGenerator;
+    this.clock = clock;
+  }
+
+  create({ ownerId, title }) {
+    return new Task({
+      id: this.idGenerator.next(),
+      ownerId,
+      title: new TaskTitle(title),
+      createdAt: this.clock.now(),
+      completed: false,
+    });
+  }
+}
+```
+
+Do not add a factory when a direct constructor is already clear.
+
+## Native callbacks remain implementation details
+
+JavaScript APIs use callbacks for events, array operations, promises, and Express routes. A callback can delegate immediately to an object method:
+
+```js
+router.post('/tasks', taskController.create);
+button.addEventListener('click', taskController.handleAdd);
+```
+
+Using a callback does not break OOP. The architectural behavior and state still belong to cohesive objects.
+
+## The rules used throughout this handbook
+
+1. Protect domain state with entities and value objects.
+2. Give each class one primary responsibility.
+3. Inject collaborators through constructors.
+4. Depend on small application-owned contracts.
+5. Keep framework objects at controllers and adapters.
+6. Keep SQL inside repository implementations.
+7. Prefer composition over implementation inheritance.
+8. Make alternative implementations behaviorally substitutable.
+9. Put object creation in a composition root.
+10. Test public behavior rather than private fields.
+
+Use the [OOP review checklist](/reference/oop-checklist) before accepting a feature.
+
+<Warning>
+Do not force domain logic into inheritance hierarchies. Deep inheritance increases coupling and makes behavior harder to combine. Prefer small objects that collaborate through explicit contracts.
+</Warning>

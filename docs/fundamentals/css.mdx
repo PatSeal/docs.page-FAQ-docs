@@ -1,0 +1,198 @@
+---
+title: "CSS: Presentation and Layout"
+description: Understand selectors, the cascade, the box model, Flexbox, and Grid.
+---
+
+CSS stands for **Cascading Style Sheets**. It turns structured HTML into a visual interface while preserving the document's meaning.
+
+## Rules, selectors, and declarations
+
+```css
+.notice {
+  padding: 1rem;
+  color: #312e81;
+  background-color: #eef2ff;
+}
+```
+
+- `.notice` is the selector.
+- `padding` is a property.
+- `1rem` is its value.
+- A property-value pair is a declaration.
+
+Prefer class selectors for reusable styles. Element selectors are useful for broad defaults. Keep ID selectors for unique page references rather than routine styling.
+
+## The cascade
+
+When rules conflict, the browser considers:
+
+1. origin and importance;
+2. selector specificity; and
+3. source order when the earlier factors are equal.
+
+Keep selectors simple and let later rules represent intentional variations:
+
+```css
+.button {
+  background: #e5e7eb;
+}
+
+.button--primary {
+  color: white;
+  background: #7c3aed;
+}
+```
+
+Avoid frequent `!important`. It makes normal overrides harder to reason about.
+
+## Inheritance and custom properties
+
+Some values, such as text color and font, pass from parent to child. Custom properties also inherit:
+
+```css
+:root {
+  --color-brand: #7c3aed;
+  --space-md: 1rem;
+}
+
+body {
+  color: #1f2937;
+  font-family: system-ui, sans-serif;
+}
+
+.button {
+  padding: var(--space-md);
+  background: var(--color-brand);
+}
+```
+
+Custom properties give repeated decisions a name and make themes easier to change.
+
+## Object-oriented CSS components
+
+CSS is not an object-oriented programming language, but reusable component classes can follow **Object-Oriented CSS (OOCSS)** ideas: separate structure from visual skin and extend a stable base with modifiers.
+
+```css
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding-inline: 1rem;
+  border-radius: 0.5rem;
+}
+
+.button--primary {
+  color: white;
+  background: var(--color-brand);
+}
+
+.button--quiet {
+  color: var(--color-brand);
+  background: transparent;
+}
+```
+
+The base class owns layout structure. Modifier classes supply variants without copying the whole rule. JavaScript view objects choose class names; they should not set many inline presentation values.
+
+## The box model
+
+Every displayed element is a box made of:
+
+1. content;
+2. padding around the content;
+3. border around the padding; and
+4. margin outside the border.
+
+Use this global rule so declared widths include padding and borders:
+
+```css
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+```
+
+## Normal flow
+
+By default, block elements stack vertically and inline content flows inside lines. Start with normal flow. Add a layout system only where a relationship needs it.
+
+## Flexbox for one-dimensional layout
+
+Flexbox arranges items mainly along one row or one column:
+
+```css
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+```
+
+Use it for navigation, toolbars, form actions, and aligned card content.
+
+## Grid for two-dimensional layout
+
+Grid manages rows and columns together:
+
+```css
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 1.5rem;
+}
+```
+
+This creates as many card columns as fit and collapses naturally to one column on narrow screens.
+
+## Sizing that adapts
+
+Useful units include:
+
+- `rem`: relative to the root font size, useful for text and spacing;
+- `%`: relative to the containing size;
+- `vw` and `vh`: relative to the viewport;
+- `fr`: a fraction of available Grid space; and
+- `px`: a CSS pixel, useful for borders and exact small details.
+
+A readable content container can be simple:
+
+```css
+.page {
+  width: min(100% - 2rem, 70rem);
+  margin-inline: auto;
+}
+```
+
+## States matter
+
+Style keyboard focus, not only mouse hover:
+
+```css
+a:hover {
+  text-decoration-thickness: 0.15em;
+}
+
+a:focus-visible {
+  outline: 3px solid #f59e0b;
+  outline-offset: 3px;
+}
+```
+
+Also plan disabled, loading, empty, invalid, selected, and error states.
+
+## Debug CSS
+
+Use the browser's Elements panel to inspect:
+
+- which rules match;
+- which declarations are overridden;
+- the computed property value;
+- the box model dimensions; and
+- Flexbox or Grid overlays.
+
+When a style does not apply, first check whether the selector matches and whether another rule wins the cascade.

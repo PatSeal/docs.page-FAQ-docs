@@ -1,0 +1,204 @@
+---
+title: Components, Objects, and State
+description: Build focused interface objects and keep state changes encapsulated.
+---
+
+A frontend **component** is a focused interface unit. In this handbook, a component is represented by one or more collaborating objects: an entity or view model for state, a view for rendering, and a controller for interaction.
+
+## Find object boundaries
+
+For a task page, useful objects are:
+
+- `Task`: protects one task's state and rules;
+- `TaskCollection`: owns the group of tasks and filtering;
+- `TaskFormView`: renders and reads the form;
+- `TaskListView`: renders the collection;
+- `TaskPageController`: coordinates the page workflow; and
+- `TaskApiClient`: translates between application objects and HTTP.
+
+Create an object when a region or rule has its own state, behavior, dependency, or reason to change. Do not create a class only to rename a single line.
+
+## Put behavior with state
+
+```js
+class Task {
+  #id;
+  #title;
+  #completed;
+
+  constructor({ id, title, completed = false }) {
+    this.#id = id;
+    this.#title = title;
+    this.#completed = completed;
+  }
+
+  get id() {
+    return this.#id;
+  }
+
+  get title() {
+    return this.#title;
+  }
+
+  get completed() {
+    return this.#completed;
+  }
+
+  toggle() {
+    this.#completed = !this.#completed;
+  }
+
+  matches(filter) {
+    if (filter === 'all') return true;
+    if (filter === 'complete') return this.#completed;
+    return !this.#completed;
+  }
+}
+```
+
+The task owns the meaning of its completion state. Outside code cannot assign it directly.
+
+## Let a collection own collection rules
+
+```js
+class TaskCollection {
+  #tasks = new Map();
+  #filter = 'open';
+
+  replace(tasks) {
+    this.#tasks = new Map(tasks.map((task) => [task.id, task]));
+  }
+
+  add(task) {
+    this.#tasks.set(task.id, task);
+  }
+
+  setFilter(filter) {
+    if (!['all', 'open', 'complete'].includes(filter)) {
+      throw new Error(`Unknown task filter: ${filter}`);
+    }
+    this.#filter = filter;
+  }
+
+  visible() {
+    return [...this.#tasks.values()].filter((task) => task.matches(this.#filter));
+  }
+
+  find(taskId) {
+    return this.#tasks.get(taskId) ?? null;
+  }
+}
+```
+
+The collection owns its internal map and filter invariant. The view receives a copy of visible objects instead of mutable storage.
+
+## Give views one direction of communication
+
+The view receives state for rendering and reports intentions through a handler:
+
+```js
+class StatusFilterView {
+  constructor({ root }) {
+    this.root = root;
+  }
+
+  render(selectedFilter) {
+    for (const button of this.root.querySelectorAll('[data-filter]')) {
+      button.setAttribute('aria-pressed', button.dataset.filter === selectedFilter);
+    }
+  }
+
+  onChange(handler) {
+    this.root.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-filter]');
+      if (button) handler(button.dataset.filter);
+    });
+  }
+}
+```
+
+The view does not own filtering rules. It translates DOM events into a simple filter value.
+
+## Let the controller coordinate
+
+```js
+class TaskPageController {
+  constructor({ collection, listView, filterView }) {
+    this.collection = collection;
+    this.listView = listView;
+    this.filterView = filterView;
+  }
+
+  start() {
+    this.filterView.onChange(this.handleFilterChange);
+    this.render();
+  }
+
+  handleFilterChange = (filter) => {
+    this.collection.setFilter(filter);
+    this.render();
+  };
+
+  render() {
+    this.listView.render(this.collection.visible());
+  }
+}
+```
+
+The controller depends on object contracts. It does not query the DOM or inspect collection internals.
+
+## Local, shared, server, and URL state
+
+Give each kind of state an owner:
+
+- **Local view state** belongs to a view or view model, such as whether its menu is open.
+- **Shared client state** belongs to a focused collection or session object.
+- **Server state** is represented by domain objects loaded and saved through an API client.
+- **URL state** belongs to a router or query-parameter adapter because it must be bookmarkable.
+
+Do not copy one truth into several mutable objects. When a value can be calculated from entity state, expose a method that calculates it.
+
+## Model asynchronous state as an object
+
+```js
+class LoadState {
+  #status = 'idle';
+  #error = null;
+
+  start() {
+    this.#status = 'loading';
+    this.#error = null;
+  }
+
+  succeed() {
+    this.#status = 'success';
+  }
+
+  fail(error) {
+    this.#status = 'error';
+    this.#error = error;
+  }
+
+  get status() {
+    return this.#status;
+  }
+
+  get error() {
+    return this.#error;
+  }
+}
+```
+
+The object allows only valid transitions used by the page controller. Views can render loading, empty, error, and success states explicitly.
+
+## Polymorphic views
+
+A controller can work with any view that supports `render(tasks)`: a DOM list, a table, a test spy, or a native wrapper. The controller should not check the concrete class name. It trusts the small behavior contract.
+
+## Avoid global objects by default
+
+A global singleton is easy to access and hard to control. It becomes a hidden dependency in every caller. Construct one shared object in the composition root and inject it into the few controllers that need it.
+
+<Info>
+Framework terms such as props, hooks, signals, and stores can still implement these boundaries. Keep domain behavior in ordinary objects so it does not depend on the framework lifecycle.
+</Info>
